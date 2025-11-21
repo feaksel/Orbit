@@ -2,34 +2,6 @@
 import fs from 'fs';
 import path from 'path';
 
-// Helper to interact with Vercel KV (Redis) via REST API
-// We use fetch to avoid needing to install @vercel/kv dependency for the user
-async function kvCommand(command, args) {
-    const url = process.env.KV_REST_API_URL;
-    const token = process.env.KV_REST_API_TOKEN;
-
-    if (!url || !token) {
-        throw new Error('Vercel KV not configured');
-    }
-
-    const response = await fetch(`${url}/${command}/${args.join('/')}`, {
-        headers: {
-            Authorization: `Bearer ${token}`,
-        },
-        cache: 'no-store' // Force fresh fetch from KV
-    });
-
-    if (!response.ok) {
-        throw new Error(`KV Error: ${response.statusText}`);
-    }
-
-    const json = await response.json();
-    return json.result;
-}
-
-// Local File Fallback (For when running node server.js locally)
-const LOCAL_DB_FILE = path.join(process.cwd(), 'orbit_database.json');
-
 export default async function handler(req, res) {
     // Enable CORS
     res.setHeader('Access-Control-Allow-Credentials', true);
@@ -40,7 +12,7 @@ export default async function handler(req, res) {
         'X-CSRF-Token, X-Requested-With, Accept, Accept-Version, Content-Length, Content-MD5, Content-Type, Date, X-Api-Version'
     );
     
-    // Disable Caching - CRITICAL for shared links
+    // Disable Caching - CRITICAL for live sync
     res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate, proxy-revalidate');
     res.setHeader('Pragma', 'no-cache');
     res.setHeader('Expires', '0');
@@ -50,32 +22,72 @@ export default async function handler(req, res) {
         return;
     }
 
-    try {
-        // STRATEGY 1: Vercel KV (Cloud Persistence)
-        if (process.env.KV_REST_API_URL) {
+    // 1. Environment Detection
+    const isVercel = process.env.VERCEL === '1';
+    const hasKV = !!process.env.KV_REST_API_URL;
+
+    // 2. Cloud Storage (Vercel KV / Redis)
+    if (hasKV) {
+        try {
+            const kvUrl = process.env.KV_REST_API_URL;
+            const kvToken = process.env.KV_REST_API_TOKEN;
+
             if (req.method === 'GET') {
-                const data = await kvCommand('get', ['orbit_data']);
-                // Redis stores strings, so we might need to parse it, or it might be null
-                return res.status(200).json(typeof data === 'string' ? JSON.parse(data) : data || null);
-            } 
-            
-            if (req.method === 'POST') {
-                // Store as string
-                await fetch(`${process.env.KV_REST_API_URL}/set/orbit_data`, {
+                // Command: GET orbit_data
+                // We use the REST endpoint: POST / with body ["GET", "key"] for robustness
+                const response = await fetch(kvUrl, {
                     method: 'POST',
-                    headers: {
-                        Authorization: `Bearer ${process.env.KV_REST_API_TOKEN}`,
-                        'Content-Type': 'application/json'
-                    },
-                    body: JSON.stringify(req.body),
+                    headers: { Authorization: `Bearer ${kvToken}` },
+                    body: JSON.stringify(["GET", "orbit_data"]),
                     cache: 'no-store'
                 });
+
+                if (!response.ok) throw new Error(`KV Read Error: ${response.statusText}`);
+                
+                const json = await response.json();
+                // Upstash/KV returns { result: "stringified_json" } or { result: null }
+                const result = json.result;
+
+                if (!result) return res.status(200).json(null);
+                
+                // If stored as a string, parse it. If stored as JSON object, use as is.
+                return res.status(200).json(typeof result === 'string' ? JSON.parse(result) : result);
+            }
+
+            if (req.method === 'POST') {
+                // Command: SET orbit_data value
+                // We store the entire body as a JSON string
+                const response = await fetch(kvUrl, {
+                    method: 'POST',
+                    headers: { Authorization: `Bearer ${kvToken}` },
+                    body: JSON.stringify(["SET", "orbit_data", JSON.stringify(req.body)]),
+                    cache: 'no-store'
+                });
+
+                if (!response.ok) throw new Error(`KV Write Error: ${response.statusText}`);
+                
                 return res.status(200).json({ success: true, source: 'cloud' });
             }
+        } catch (error) {
+            console.error('Cloud Persistence Error:', error);
+            return res.status(500).json({ error: 'Cloud Storage Failed', details: error.message });
         }
+    }
 
-        // STRATEGY 2: Local File System (Local Development)
-        // This works when running 'node server.js', but NOT on Vercel Serverless
+    // 3. Fallback: Local File System (Only for local dev)
+    // If running on Vercel WITHOUT KV, this is where data gets lost.
+    // We return an error on Vercel to warn the user.
+    if (isVercel && req.method === 'POST') {
+        return res.status(500).json({ 
+            error: "Database Not Configured", 
+            message: "Orbit is running on Vercel but Vercel KV is not linked. Data will not persist. Please link a KV store in Vercel Dashboard." 
+        });
+    }
+
+    // Local Development Handler
+    const LOCAL_DB_FILE = path.join(process.cwd(), 'orbit_database.json');
+
+    try {
         if (req.method === 'GET') {
             if (fs.existsSync(LOCAL_DB_FILE)) {
                 const data = fs.readFileSync(LOCAL_DB_FILE, 'utf-8');
@@ -88,10 +100,8 @@ export default async function handler(req, res) {
             fs.writeFileSync(LOCAL_DB_FILE, JSON.stringify(req.body, null, 2));
             return res.status(200).json({ success: true, source: 'local' });
         }
-
     } catch (error) {
-        console.error('Persistence Error:', error);
-        // Fallback: If cloud fails, we return error so frontend keeps using local storage
-        return res.status(500).json({ error: 'Persistence failed', details: error.message });
+        console.error('Local Persistence Error:', error);
+        return res.status(500).json({ error: 'Local Storage Failed', details: error.message });
     }
 }

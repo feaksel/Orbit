@@ -20,6 +20,7 @@ export const generateId = (): string => {
 let syncTimeout: any = null;
 let isSyncing = false;
 let isDirty = false; // Flag to track if we have unsaved local changes
+let lastDirtyTime = 0; // Track when we became dirty to prevent deadlocks
 let syncInterval: any = null;
 
 export const startAutoSync = () => {
@@ -40,6 +41,7 @@ export const startAutoSync = () => {
 // Saves current local state to the server (Debounced)
 const triggerServerSync = () => {
     isDirty = true; // Mark as dirty immediately so we don't overwrite with incoming server data while typing
+    lastDirtyTime = Date.now();
     
     if (syncTimeout) clearTimeout(syncTimeout);
     syncTimeout = setTimeout(async () => {
@@ -63,25 +65,40 @@ const triggerServerSync = () => {
             if (res.ok) {
                 console.log('Synced to server/cloud');
                 isDirty = false; // Sync complete, safe to pull again
+            } else {
+                console.warn('Sync failed:', await res.text());
             }
         } catch (e) {
             // Silent fail - offline mode
             console.debug('Sync skipped (Offline)');
-            // Keep isDirty true so we retry later or don't overwrite
         } finally {
             isSyncing = false;
+            
+            // DEADLOCK PROTECTION:
+            // If sync failed, we are still "dirty". But we shouldn't block reads forever.
+            // If the user stops interacting, we'll eventually retry or allow a pull.
+            // We don't force false here to avoid overwrite, but initializeFromServer handles the timeout.
         }
     }, 2000); // 2 second debounce to reduce cloud writes
 };
 
 export const initializeFromServer = async (): Promise<boolean> => {
     // CRITICAL: If we have unsaved local changes (user is typing), do NOT pull from server
-    // This prevents the "ghost typing" issue where server data overwrites local work
-    if (isDirty) return false;
+    // This prevents the "ghost typing" issue where server data overwrites local work.
+    
+    // DEADLOCK FIX: If isDirty has been true for > 10 seconds, assume the sync failed/stuck
+    // and allow a pull to happen. Better to refresh data than stay broken offline.
+    if (isDirty && (Date.now() - lastDirtyTime < 10000)) {
+        return false;
+    } else if (isDirty) {
+        // Reset dirty flag if it expired
+        console.log("Sync lock expired, forcing refresh...");
+        isDirty = false;
+    }
 
     try {
         // Add timestamp to force bypass browser cache and Vercel edge cache
-        const uniqueUrl = `${SERVER_API_URL}?t=${Date.now()}`;
+        const uniqueUrl = `${SERVER_API_URL}?t=${Date.now()}&r=${Math.random()}`;
         
         const response = await fetch(uniqueUrl, {
             method: 'GET',
@@ -92,6 +109,7 @@ export const initializeFromServer = async (): Promise<boolean> => {
                 'Expires': '0'
             }
         });
+        
         if (!response.ok) return false;
         
         const data = await response.json();
@@ -119,6 +137,7 @@ export const initializeFromServer = async (): Promise<boolean> => {
         
         // Notify app to refresh only if we actually updated something (reduces flicker)
         if (hasChanges) {
+            console.log("Received new data from cloud");
             window.dispatchEvent(new Event(DATA_UPDATE_EVENT));
         }
         return true;
