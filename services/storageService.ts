@@ -1,0 +1,307 @@
+import { Person, Circle, Interaction, InteractionType, Task } from '../types';
+
+const STORAGE_KEY_PEOPLE = 'orbit_people_v1';
+const STORAGE_KEY_CIRCLES = 'orbit_circles_v1';
+const STORAGE_KEY_TASKS = 'orbit_tasks_v1';
+
+// Helper for Robust IDs
+export const generateId = (): string => {
+    if (typeof crypto !== 'undefined' && crypto.randomUUID) {
+        return crypto.randomUUID();
+    }
+    // Fallback with high entropy
+    return 'id_' + Date.now().toString(36) + '_' + Math.random().toString(36).substring(2);
+};
+
+// Initial Seed Data
+const DEFAULT_CIRCLES: Circle[] = [
+  { id: 'c1', name: 'Family', color: '#ec4899' }, // Pink
+  { id: 'c2', name: 'Friends', color: '#f59e0b' }, // Amber
+  { id: 'c3', name: 'Work', color: '#3b82f6' },   // Blue
+  { id: 'c4', name: 'Networking', color: '#10b981' } // Emerald
+];
+
+const DEFAULT_PEOPLE: Person[] = [
+  {
+    id: 'p1',
+    name: 'Sarah Chen',
+    role: 'Product Manager',
+    company: 'TechFlow',
+    location: 'San Francisco, CA',
+    email: 'sarah.c@example.com',
+    phone: '+1 (555) 123-4567',
+    circles: ['c3', 'c2'],
+    desiredFrequencyDays: 14,
+    isFavorite: true,
+    birthday: '1990-10-24',
+    socialLinks: [
+      { platform: 'LinkedIn', url: 'https://linkedin.com/in/sarahchen' },
+      { platform: 'Twitter', url: 'https://twitter.com/sarahc' }
+    ],
+    lastContactDate: new Date(Date.now() - 1000 * 60 * 60 * 24 * 2).toISOString(),
+    interactions: [
+      {
+        id: 'i1',
+        contactId: 'p1',
+        date: new Date(Date.now() - 1000 * 60 * 60 * 24 * 2).toISOString(),
+        type: InteractionType.MEETING,
+        notes: 'Coffee catchup. Discussed the Q3 roadmap and her new puppy.',
+        sentiment: 'positive'
+      }
+    ]
+  },
+  {
+    id: 'p2',
+    name: 'Michael Ross',
+    role: 'Brother',
+    location: 'Chicago, IL',
+    phone: '+1 (555) 987-6543',
+    circles: ['c1'],
+    desiredFrequencyDays: 7,
+    isFavorite: true,
+    birthday: new Date(Date.now() + 1000 * 60 * 60 * 24 * 4).toISOString().split('T')[0],
+    lastContactDate: new Date(Date.now() - 1000 * 60 * 60 * 24 * 12).toISOString(),
+    interactions: []
+  },
+  {
+    id: 'p3',
+    name: 'Elena Rodriguez',
+    role: 'Designer',
+    company: 'Freelance',
+    circles: ['c3', 'c4'],
+    desiredFrequencyDays: 30,
+    lastContactDate: new Date(Date.now() - 1000 * 60 * 60 * 24 * 45).toISOString(),
+    interactions: []
+  },
+  {
+    id: 'p4',
+    name: 'David Kim',
+    role: 'Gym Buddy',
+    circles: ['c2'],
+    desiredFrequencyDays: 3,
+    lastContactDate: new Date(Date.now() - 1000 * 60 * 60 * 24 * 1).toISOString(),
+    interactions: []
+  }
+];
+
+const DEFAULT_TASKS: Task[] = [
+    {
+        id: 't1',
+        title: 'File Quarterly Taxes',
+        date: new Date(Date.now() + 1000 * 60 * 60 * 24 * 5).toISOString().split('T')[0],
+        isCompleted: false,
+        type: 'task',
+        recurrence: 'monthly',
+        category: 'finance'
+    },
+    {
+        id: 't2',
+        title: 'Call Mom',
+        date: new Date().toISOString().split('T')[0],
+        isCompleted: false,
+        type: 'reminder',
+        recurrence: 'weekly',
+        linkedPersonIds: ['p2'],
+        category: 'personal'
+    }
+];
+
+// --- Circles ---
+export const getCircles = (): Circle[] => {
+  const stored = localStorage.getItem(STORAGE_KEY_CIRCLES);
+  if (!stored) {
+    localStorage.setItem(STORAGE_KEY_CIRCLES, JSON.stringify(DEFAULT_CIRCLES));
+    return DEFAULT_CIRCLES;
+  }
+  return JSON.parse(stored);
+};
+
+export const createNewCircle = (name: string): Circle => {
+    const circles = getCircles();
+    // Random nice color generator
+    const colors = ['#ef4444', '#f97316', '#f59e0b', '#84cc16', '#10b981', '#06b6d4', '#0ea5e9', '#3b82f6', '#6366f1', '#8b5cf6', '#d946ef', '#f43f5e'];
+    const randomColor = colors[Math.floor(Math.random() * colors.length)];
+    
+    const newCircle: Circle = {
+        id: generateId(),
+        name: name,
+        color: randomColor
+    };
+    
+    circles.push(newCircle);
+    localStorage.setItem(STORAGE_KEY_CIRCLES, JSON.stringify(circles));
+    return newCircle;
+};
+
+// --- People ---
+export const getPeople = (): Person[] => {
+  const stored = localStorage.getItem(STORAGE_KEY_PEOPLE);
+  if (!stored) {
+    localStorage.setItem(STORAGE_KEY_PEOPLE, JSON.stringify(DEFAULT_PEOPLE));
+    return DEFAULT_PEOPLE;
+  }
+  return JSON.parse(stored);
+};
+
+export const savePerson = (person: Person): void => {
+  const people = getPeople();
+  // Ensure ID is set if missing
+  if (!person.id) person.id = generateId();
+  
+  const index = people.findIndex(p => p.id === person.id);
+
+  if (index >= 0) {
+    people[index] = person;
+  } else {
+    people.push(person);
+  }
+  localStorage.setItem(STORAGE_KEY_PEOPLE, JSON.stringify(people));
+};
+
+export const updatePerson = (personId: string, updates: Partial<Person>): Person | null => {
+  const people = getPeople();
+  const index = people.findIndex(p => p.id === personId);
+  if (index === -1) return null;
+  
+  people[index] = { ...people[index], ...updates };
+  localStorage.setItem(STORAGE_KEY_PEOPLE, JSON.stringify(people));
+  return people[index];
+};
+
+export const getPersonById = (id: string): Person | undefined => {
+  return getPeople().find(p => p.id === id);
+};
+
+// --- Interactions ---
+export const addInteraction = (personId: string, interaction: Omit<Interaction, 'id' | 'contactId'>): void => {
+  const people = getPeople();
+  const person = people.find(p => p.id === personId);
+  if (person) {
+    const newInteraction: Interaction = {
+      ...interaction,
+      id: generateId(),
+      contactId: personId
+    };
+    person.interactions.unshift(newInteraction);
+    
+    if (!person.lastContactDate || new Date(interaction.date) > new Date(person.lastContactDate)) {
+      person.lastContactDate = interaction.date;
+    }
+    
+    savePerson(person);
+  }
+};
+
+export const updateInteraction = (personId: string, interactionId: string, updates: Partial<Interaction>): void => {
+  const people = getPeople();
+  const person = people.find(p => p.id === personId);
+  if (person) {
+    const intIndex = person.interactions.findIndex(i => i.id === interactionId);
+    if (intIndex >= 0) {
+      person.interactions[intIndex] = { ...person.interactions[intIndex], ...updates };
+      
+      person.interactions.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+
+      const dates = person.interactions.map(i => new Date(i.date).getTime());
+      if (dates.length > 0) {
+        person.lastContactDate = new Date(Math.max(...dates)).toISOString();
+      } else {
+        person.lastContactDate = undefined;
+      }
+
+      savePerson(person);
+    }
+  }
+};
+
+export const deleteInteraction = (personId: string, interactionId: string): void => {
+    const people = getPeople();
+    const person = people.find(p => p.id === personId);
+    if (person) {
+        person.interactions = person.interactions.filter(i => i.id !== interactionId);
+        
+        const dates = person.interactions.map(i => new Date(i.date).getTime());
+        if (dates.length > 0) {
+            person.lastContactDate = new Date(Math.max(...dates)).toISOString();
+        } else {
+            person.lastContactDate = undefined;
+        }
+
+        savePerson(person);
+    }
+};
+
+// --- Tasks ---
+export const getTasks = (): Task[] => {
+    const stored = localStorage.getItem(STORAGE_KEY_TASKS);
+    if (!stored) {
+        localStorage.setItem(STORAGE_KEY_TASKS, JSON.stringify(DEFAULT_TASKS));
+        return DEFAULT_TASKS;
+    }
+    return JSON.parse(stored);
+};
+
+export const saveTask = (task: Task): void => {
+    const tasks = getTasks();
+    // Ensure ID
+    if (!task.id) task.id = generateId();
+
+    const index = tasks.findIndex(t => t.id === task.id);
+    if (index >= 0) {
+        tasks[index] = task;
+    } else {
+        tasks.push(task);
+    }
+    localStorage.setItem(STORAGE_KEY_TASKS, JSON.stringify(tasks));
+};
+
+export const deleteTask = (taskId: string): void => {
+    try {
+        const tasks = getTasks();
+        // Filter out the task with the given ID
+        const filtered = tasks.filter(t => String(t.id) !== String(taskId));
+        localStorage.setItem(STORAGE_KEY_TASKS, JSON.stringify(filtered));
+    } catch (e) {
+        console.error("Failed to delete task", e);
+    }
+};
+
+export const toggleTaskCompletion = (taskId: string): void => {
+    const tasks = getTasks();
+    const task = tasks.find(t => t.id === taskId);
+    
+    if (task) {
+        // Store original state
+        const wasCompleted = task.isCompleted;
+        
+        // Toggle current status
+        task.isCompleted = !wasCompleted;
+        
+        // Handle Recurrence Stacking
+        // Only create a new task if we are marking it AS completed, and it has recurrence
+        if (!wasCompleted && task.recurrence && task.recurrence !== 'none') {
+            const nextDate = new Date(task.date || new Date().toISOString());
+            
+            // Calculate next date
+            if (task.recurrence === 'daily') nextDate.setDate(nextDate.getDate() + 1);
+            if (task.recurrence === 'weekly') nextDate.setDate(nextDate.getDate() + 7);
+            if (task.recurrence === 'monthly') nextDate.setMonth(nextDate.getMonth() + 1);
+            if (task.recurrence === 'yearly') nextDate.setFullYear(nextDate.getFullYear() + 1);
+            
+            const nextTask: Task = {
+                ...task,
+                id: generateId(), // New Unique ID
+                date: nextDate.toISOString().split('T')[0],
+                isCompleted: false // New instance is active
+            };
+            tasks.push(nextTask);
+
+            // STRIP recurrence from the completed item so it becomes a static history entry
+            // This prevents double-spawning if user toggles it back and forth
+            // It effectively "archives" this specific instance
+            task.recurrence = 'none'; 
+        }
+
+        localStorage.setItem(STORAGE_KEY_TASKS, JSON.stringify(tasks));
+    }
+};
