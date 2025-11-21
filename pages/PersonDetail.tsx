@@ -1,10 +1,10 @@
 
 import React, { useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { getPersonById, getCircles, addInteraction, updatePerson, updateInteraction, deleteInteraction, DATA_UPDATE_EVENT } from '../services/storageService';
+import { getPersonById, getCircles, addInteraction, updatePerson, updateInteraction, deleteInteraction, deletePerson, DATA_UPDATE_EVENT } from '../services/storageService';
 import { Person, Circle, InteractionType, Interaction, Attachment } from '../types';
 import { HealthBadge, calculateHealthScore } from '../components/HealthBadge';
-import { ArrowLeft, Mail, Phone, MapPin, Calendar, Plus, MessageSquare, Edit2, Save, X, Star, Globe, Trash2, Link as LinkIcon, AlignLeft, Paperclip, FileText, Camera, Check, Tag, Clock } from 'lucide-react';
+import { ArrowLeft, Mail, Phone, MapPin, Calendar, Plus, MessageSquare, Edit2, Save, X, Star, Globe, Trash2, Link as LinkIcon, AlignLeft, Paperclip, FileText, Camera, Check, Tag, Clock, AlertTriangle } from 'lucide-react';
 import { InteractionModal } from '../components/InteractionModal';
 
 export const PersonDetail: React.FC = () => {
@@ -32,6 +32,8 @@ export const PersonDetail: React.FC = () => {
   const [isAddingNote, setIsAddingNote] = useState(false);
   const [newNoteText, setNewNoteText] = useState('');
 
+  const [newTag, setNewTag] = useState('');
+
   // Log Modal
   const [isLogModalOpen, setIsLogModalOpen] = useState(false);
 
@@ -57,6 +59,9 @@ export const PersonDetail: React.FC = () => {
                 notes: p.notes,
                 attachments: p.attachments || []
             });
+        } else {
+            // Handle case where person doesn't exist (e.g. after deletion)
+            // navigate('/people'); 
         }
     }
     setCircles(getCircles());
@@ -134,6 +139,22 @@ export const PersonDetail: React.FC = () => {
       }
   };
 
+  const handleAddTag = (e: React.KeyboardEvent) => {
+      if (e.key === 'Enter' && newTag.trim()) {
+          e.preventDefault();
+          const currentTags = editForm.tags || [];
+          if (!currentTags.includes(newTag.trim())) {
+              setEditForm({ ...editForm, tags: [...currentTags, newTag.trim()] });
+          }
+          setNewTag('');
+      }
+  };
+
+  const removeTag = (tagToRemove: string) => {
+      const currentTags = editForm.tags || [];
+      setEditForm({ ...editForm, tags: currentTags.filter(t => t !== tagToRemove) });
+  };
+
   const handlePhotoUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
       const file = e.target.files?.[0];
       if (file) {
@@ -151,6 +172,13 @@ export const PersonDetail: React.FC = () => {
           setEditForm({...editForm, circles: currentCircles.filter(c => c !== circleId)});
       } else {
           setEditForm({...editForm, circles: [...currentCircles, circleId]});
+      }
+  };
+
+  const handleDeletePerson = () => {
+      if (person && window.confirm(`Are you sure you want to delete ${person.name}? This action cannot be undone.`)) {
+          deletePerson(person.id);
+          navigate('/people');
       }
   };
 
@@ -299,6 +327,7 @@ export const PersonDetail: React.FC = () => {
                         </>
                     )}
                     
+                    {/* Circle Tags */}
                     {isEditingProfile ? (
                         <div className="flex flex-wrap gap-2 justify-center mb-4">
                             {circles.map(c => (
@@ -325,6 +354,30 @@ export const PersonDetail: React.FC = () => {
                             ))}
                         </div>
                     )}
+                    
+                    {/* Context Tags */}
+                    {(person.tags && person.tags.length > 0) || isEditingProfile ? (
+                        <div className="flex flex-wrap justify-center gap-1.5 mb-6 px-4">
+                             {(isEditingProfile ? editForm.tags : person.tags)?.map((tag, idx) => (
+                                 <span key={idx} className="bg-slate-800 text-slate-400 text-[10px] px-2 py-1 rounded border border-slate-700 flex items-center gap-1">
+                                     <Tag className="w-2 h-2" /> 
+                                     {tag}
+                                     {isEditingProfile && (
+                                         <button onClick={() => removeTag(tag)} className="hover:text-red-400 ml-1"><X className="w-2 h-2"/></button>
+                                     )}
+                                 </span>
+                             ))}
+                             {isEditingProfile && (
+                                 <input 
+                                    className="bg-transparent border-b border-slate-700 text-xs w-20 outline-none text-slate-300 placeholder-slate-600 focus:border-orbit-500 transition-colors"
+                                    placeholder="+ Tag"
+                                    value={newTag}
+                                    onChange={e => setNewTag(e.target.value)}
+                                    onKeyDown={handleAddTag}
+                                 />
+                             )}
+                        </div>
+                    ) : null}
 
                     <div className="flex gap-2 justify-center">
                          <a href={`tel:${person.phone}`} className={`bg-green-600 hover:bg-green-500 text-white p-2.5 rounded-lg flex items-center justify-center transition-colors ${!person.phone && 'opacity-50 cursor-not-allowed pointer-events-none'}`}>
@@ -497,6 +550,16 @@ export const PersonDetail: React.FC = () => {
                         </div>
                     )}
                 </div>
+            </div>
+            
+            {/* Danger Zone */}
+            <div className="mt-8 pt-6 border-t border-slate-800">
+                 <button 
+                    onClick={handleDeletePerson}
+                    className="w-full py-3 border border-red-500/30 text-red-400 hover:bg-red-500/10 rounded-xl text-sm font-medium flex items-center justify-center gap-2 transition-colors"
+                 >
+                     <Trash2 className="w-4 h-4" /> Delete Contact
+                 </button>
             </div>
         </div>
 

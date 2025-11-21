@@ -117,21 +117,31 @@ export const initializeFromServer = async (): Promise<boolean> => {
         const uniqueUrl = `${SERVER_API_URL}?t=${Date.now()}&r=${Math.random()}`;
         
         const response = await fetch(uniqueUrl, {
-            method: 'GET',
+            method: 'POST', // Using POST to avoid aggressive caching on some edge networks if GET is sticky
             cache: 'no-store',
             headers: { 
+                'Content-Type': 'application/json', // Some proxies need this
                 'Cache-Control': 'no-cache, no-store, must-revalidate',
                 'Pragma': 'no-cache',
                 'Expires': '0'
-            }
+            },
+            // Sending a body makes it a non-simple request, often bypassing cache
+            body: JSON.stringify({ action: 'fetch_latest' }) 
         });
         
-        if (!response.ok) {
+        // Fallback to GET if POST fails (e.g. static file host)
+        let data;
+        if (response.status === 405 || response.status === 404) {
+             const getResponse = await fetch(`${SERVER_API_URL}?t=${Date.now()}`);
+             if (!getResponse.ok) return false;
+             data = await getResponse.json();
+        } else if (!response.ok) {
             if (response.status !== 404) setSyncStatus('error');
             return false;
+        } else {
+            data = await response.json();
         }
-        
-        const data = await response.json();
+
         if (!data) return false;
 
         let hasChanges = false;
@@ -324,6 +334,13 @@ export const updatePerson = (personId: string, updates: Partial<Person>): Person
   localStorage.setItem(STORAGE_KEY_PEOPLE, JSON.stringify(people));
   triggerServerSync();
   return people[index];
+};
+
+export const deletePerson = (personId: string): void => {
+    let people = getPeople();
+    people = people.filter(p => p.id !== personId);
+    localStorage.setItem(STORAGE_KEY_PEOPLE, JSON.stringify(people));
+    triggerServerSync();
 };
 
 export const getPersonById = (id: string): Person | undefined => {

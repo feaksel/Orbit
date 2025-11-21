@@ -1,6 +1,6 @@
 
 import React, { useState, useEffect } from 'react';
-import { X, Check, User, Briefcase, Calendar, Star, AlignLeft, Phone, Smartphone, Circle as CircleIcon, Plus, Clock } from 'lucide-react';
+import { X, Check, User, Briefcase, Calendar, Star, AlignLeft, Phone, Smartphone, Circle as CircleIcon, Plus, Clock, Tag } from 'lucide-react';
 import { Person, Circle } from '../types';
 import { savePerson, getCircles, createNewCircle, generateId } from '../services/storageService';
 
@@ -20,12 +20,13 @@ export const AddPersonModal: React.FC<AddPersonModalProps> = ({ isOpen, onClose,
     isFavorite: false,
     notes: '',
     circles: [],
-    tags: [], // Kept for type compatibility but not used in UI
+    tags: [], 
     desiredFrequencyDays: 14
   });
   
   const [allCircles, setAllCircles] = useState<Circle[]>([]);
   const [circleInput, setCircleInput] = useState('');
+  const [tagInput, setTagInput] = useState('');
   const [importStatus, setImportStatus] = useState('');
 
   useEffect(() => {
@@ -66,6 +67,21 @@ export const AddPersonModal: React.FC<AddPersonModalProps> = ({ isOpen, onClose,
     } else {
         setForm({ ...form, circles: [...currentCircles, circleId] });
     }
+  };
+
+  const handleAddTag = (e: React.KeyboardEvent) => {
+      if (e.key === 'Enter' && tagInput.trim()) {
+          e.preventDefault();
+          const currentTags = form.tags || [];
+          if (!currentTags.includes(tagInput.trim())) {
+              setForm({ ...form, tags: [...currentTags, tagInput.trim()] });
+          }
+          setTagInput('');
+      }
+  };
+
+  const removeTag = (tag: string) => {
+      setForm({ ...form, tags: (form.tags || []).filter(t => t !== tag) });
   };
 
   const handleImportContacts = async () => {
@@ -118,7 +134,7 @@ export const AddPersonModal: React.FC<AddPersonModalProps> = ({ isOpen, onClose,
       isFavorite: form.isFavorite,
       notes: form.notes,
       circles: form.circles || [],
-      tags: [],
+      tags: form.tags || [],
       desiredFrequencyDays: form.desiredFrequencyDays || 14,
       interactions: [],
       socialLinks: [],
@@ -141,6 +157,7 @@ export const AddPersonModal: React.FC<AddPersonModalProps> = ({ isOpen, onClose,
       desiredFrequencyDays: 14
     });
     setCircleInput('');
+    setTagInput('');
     
     onAdded();
     onClose();
@@ -317,6 +334,28 @@ export const AddPersonModal: React.FC<AddPersonModalProps> = ({ isOpen, onClose,
                             </button>
                         )}
                     </div>
+                </div>
+            </div>
+
+            {/* Tags Section */}
+            <div className="space-y-2">
+                <label className="text-sm font-medium text-slate-300 flex items-center gap-2">
+                    <Tag className="w-3 h-3" /> Tags
+                </label>
+                <div className="flex flex-wrap items-center gap-2 bg-dark-bg border border-slate-700 rounded-lg p-2">
+                    {form.tags?.map((tag, idx) => (
+                        <span key={idx} className="bg-slate-800 text-slate-300 text-xs px-2 py-1 rounded flex items-center gap-1">
+                            {tag}
+                            <button type="button" onClick={() => removeTag(tag)} className="hover:text-white"><X className="w-3 h-3" /></button>
+                        </span>
+                    ))}
+                    <input 
+                        value={tagInput}
+                        onChange={e => setTagInput(e.target.value)}
+                        onKeyDown={handleAddTag}
+                        placeholder={form.tags?.length ? "+ Add tag" : "Add tags (e.g. Gym, College)..."}
+                        className="bg-transparent outline-none text-xs text-white placeholder-slate-500 flex-1 min-w-[100px]"
+                    />
                 </div>
             </div>
 
