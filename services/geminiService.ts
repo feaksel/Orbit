@@ -1,6 +1,13 @@
 import { GoogleGenAI, Type } from "@google/genai";
 import { Person } from '../types';
 
+// Declare process for TypeScript to avoid 'Cannot find name process' error during build
+declare const process: {
+  env: {
+    API_KEY: string;
+  }
+};
+
 const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
 
 // Schema for the conversational parser
