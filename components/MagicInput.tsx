@@ -1,5 +1,6 @@
+
 import React, { useState } from 'react';
-import { Sparkles, ArrowRight, Loader2, X, Check, Calendar, Users, MessageSquare, Edit2 } from 'lucide-react';
+import { Sparkles, ArrowRight, Loader2, X, Check, Calendar, Users, MessageSquare, Edit2, HelpCircle } from 'lucide-react';
 import { parseConversationalInput } from '../services/geminiService';
 import { getPeople, savePerson, addInteraction } from '../services/storageService';
 import { InteractionType, Person } from '../types';
@@ -21,6 +22,7 @@ export const MagicInput: React.FC<MagicInputProps> = ({ onUpdate }) => {
   const [input, setInput] = useState('');
   const [isProcessing, setIsProcessing] = useState(false);
   const [feedback, setFeedback] = useState<string | null>(null);
+  const [showHelp, setShowHelp] = useState(false);
   
   // Confirmation State
   const [pendingAction, setPendingAction] = useState<PendingAction | null>(null);
@@ -31,6 +33,7 @@ export const MagicInput: React.FC<MagicInputProps> = ({ onUpdate }) => {
 
     setIsProcessing(true);
     setFeedback(null);
+    setShowHelp(false);
 
     try {
       const people = getPeople();
@@ -125,6 +128,7 @@ export const MagicInput: React.FC<MagicInputProps> = ({ onUpdate }) => {
           value={input}
           onChange={(e) => setInput(e.target.value)}
           disabled={isProcessing || !!pendingAction}
+          onFocus={() => setShowHelp(true)}
         />
         <button 
             type="submit"
@@ -134,6 +138,31 @@ export const MagicInput: React.FC<MagicInputProps> = ({ onUpdate }) => {
             <ArrowRight className="h-5 w-5" />
         </button>
       </form>
+
+      {/* Tips Dropdown */}
+      {showHelp && !input && !pendingAction && (
+          <div className="absolute top-full left-0 right-0 mt-2 bg-dark-card border border-slate-700 rounded-xl p-4 shadow-xl z-50 animate-fade-in">
+              <div className="text-xs text-slate-500 uppercase font-bold tracking-wider mb-2 flex items-center gap-2">
+                  <HelpCircle className="w-3 h-3" /> Try asking...
+              </div>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
+                  {[
+                      "Had lunch with Michael yesterday",
+                      "Just met Alice at the Tech Conference",
+                      "Called Mom for 30 mins to catch up",
+                      "Email from David about the project"
+                  ].map((tip, i) => (
+                      <button 
+                        key={i}
+                        onClick={() => { setInput(tip); setShowHelp(false); }}
+                        className="text-left text-sm text-slate-300 hover:text-white hover:bg-slate-800 p-2 rounded transition-colors"
+                      >
+                          "{tip}"
+                      </button>
+                  ))}
+              </div>
+          </div>
+      )}
 
       {/* Confirmation Card */}
       {pendingAction && (

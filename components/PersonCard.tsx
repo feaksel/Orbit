@@ -1,8 +1,10 @@
+
 import React from 'react';
 import { Person, Circle } from '../types';
 import { HealthBadge, calculateHealthScore } from './HealthBadge';
 import { Calendar, MapPin, Briefcase, CheckCircle2, MessageSquare, Star } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
+import { timeAgo } from '../utils/dateUtils';
 
 interface PersonCardProps {
   person: Person;
@@ -33,7 +35,7 @@ export const PersonCard: React.FC<PersonCardProps> = ({ person, circles, onQuick
         <div className="flex items-center gap-4">
           <div className="relative">
              <img 
-                src={person.avatar || `https://ui-avatars.com/api/?name=${encodeURIComponent(person.name)}&background=0ea5e9&color=fff`} 
+                src={person.avatar || `https://ui-avatars.com/api/?name=${encodeURIComponent(person.name)}&background=0ea5e9&color=fff&rounded=true&bold=true`} 
                 alt={person.name}
                 className="w-14 h-14 rounded-full object-cover bg-slate-700"
              />
@@ -80,8 +82,8 @@ export const PersonCard: React.FC<PersonCardProps> = ({ person, circles, onQuick
           <Calendar className="w-4 h-4 text-slate-500 shrink-0" />
           <span className={`text-xs ${healthScore < 50 ? 'text-red-400' : ''}`}>
             {person.lastContactDate 
-              ? `Last: ${new Date(person.lastContactDate).toLocaleDateString()}` 
-              : 'No interactions'}
+              ? `Last: ${timeAgo(person.lastContactDate)}` 
+              : 'No interactions yet'}
           </span>
         </div>
       </div>

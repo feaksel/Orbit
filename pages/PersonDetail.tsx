@@ -1,17 +1,19 @@
 
 import React, { useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { getPersonById, getCircles, addInteraction, updatePerson, updateInteraction, deleteInteraction, deletePerson, DATA_UPDATE_EVENT } from '../services/storageService';
-import { Person, Circle, InteractionType, Interaction, Attachment } from '../types';
+import { getPersonById, getCircles, addInteraction, updatePerson, updateInteraction, deleteInteraction, deletePerson, DATA_UPDATE_EVENT, getTasks } from '../services/storageService';
+import { Person, Circle, InteractionType, Interaction, Attachment, Task } from '../types';
 import { HealthBadge, calculateHealthScore } from '../components/HealthBadge';
-import { ArrowLeft, Mail, Phone, MapPin, Calendar, Plus, MessageSquare, Edit2, Save, X, Star, Globe, Trash2, Link as LinkIcon, AlignLeft, Paperclip, FileText, Camera, Check, Tag, Clock, AlertTriangle } from 'lucide-react';
+import { ArrowLeft, Mail, Phone, MapPin, Calendar, Plus, MessageSquare, Edit2, Save, X, Star, Globe, Trash2, Link as LinkIcon, AlignLeft, Paperclip, FileText, Camera, Check, Tag, Clock, AlertTriangle, Briefcase, CheckCircle2 } from 'lucide-react';
 import { InteractionModal } from '../components/InteractionModal';
+import { timeAgo, formatDateReadable } from '../utils/dateUtils';
 
 export const PersonDetail: React.FC = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const [person, setPerson] = useState<Person | null>(null);
   const [circles, setCircles] = useState<Circle[]>([]);
+  const [linkedTasks, setLinkedTasks] = useState<Task[]>([]);
   
   // Edit Mode States
   const [isEditingProfile, setIsEditingProfile] = useState(false);
@@ -59,9 +61,11 @@ export const PersonDetail: React.FC = () => {
                 notes: p.notes,
                 attachments: p.attachments || []
             });
-        } else {
-            // Handle case where person doesn't exist (e.g. after deletion)
-            // navigate('/people'); 
+            
+            // Find tasks linked to this person
+            const allTasks = getTasks();
+            const linked = allTasks.filter(t => !t.isCompleted && t.linkedPersonIds?.includes(p.id));
+            setLinkedTasks(linked);
         }
     }
     setCircles(getCircles());
@@ -286,9 +290,9 @@ export const PersonDetail: React.FC = () => {
                 <div className="relative z-10">
                     <div className="relative inline-block mb-4 group/avatar">
                         <img 
-                            src={(isEditingProfile ? editForm.avatar : person.avatar) || `https://ui-avatars.com/api/?name=${encodeURIComponent(person.name)}&background=0ea5e9&color=fff&size=128`} 
+                            src={(isEditingProfile ? editForm.avatar : person.avatar) || `https://ui-avatars.com/api/?name=${encodeURIComponent(person.name)}&background=0ea5e9&color=fff&size=128&rounded=true`} 
                             alt={person.name}
-                            className="w-32 h-32 rounded-full object-cover border-4 border-dark-card shadow-xl"
+                            className="w-32 h-32 rounded-full object-cover border-4 border-dark-card shadow-xl bg-slate-800"
                         />
                         {isEditingProfile && (
                             <label className="absolute inset-0 flex items-center justify-center bg-black/50 rounded-full cursor-pointer opacity-0 group-hover/avatar:opacity-100 transition-opacity">
@@ -565,6 +569,32 @@ export const PersonDetail: React.FC = () => {
 
         {/* Right Column: Interactions & Notes */}
         <div className="lg:col-span-2 space-y-6">
+
+            {/* Linked Tasks Section */}
+            {linkedTasks.length > 0 && (
+                <div className="bg-gradient-to-r from-orbit-900/20 to-purple-900/20 p-6 rounded-2xl border border-orbit-500/20">
+                     <h2 className="text-lg font-bold text-white flex items-center gap-2 mb-4">
+                        <CheckCircle2 className="w-5 h-5 text-orbit-400" />
+                        Upcoming Plans
+                    </h2>
+                    <div className="grid gap-3">
+                        {linkedTasks.map(task => (
+                            <div key={task.id} onClick={() => navigate('/reminders')} className="bg-dark-card p-3 rounded-xl border border-slate-700/50 flex items-center justify-between cursor-pointer hover:border-orbit-500/50 transition-all">
+                                <div className="flex flex-col">
+                                    <span className="text-white font-medium">{task.title}</span>
+                                    <span className="text-xs text-slate-400 flex items-center gap-1 mt-1">
+                                        <Calendar className="w-3 h-3" /> 
+                                        {task.date ? formatDateReadable(task.date) : 'Unscheduled'}
+                                    </span>
+                                </div>
+                                <div className="bg-slate-800 px-3 py-1 rounded text-xs text-slate-300">
+                                    {timeAgo(task.date)}
+                                </div>
+                            </div>
+                        ))}
+                    </div>
+                </div>
+            )}
             
             {/* Attachments */}
             <div className="bg-dark-card p-6 rounded-2xl border border-slate-700/50">
@@ -698,89 +728,96 @@ export const PersonDetail: React.FC = () => {
                 <h2 className="text-xl font-bold text-white">Interaction History</h2>
             </div>
 
-            <div className="space-y-4">
+            <div className="relative pl-4 border-l border-slate-800 space-y-8">
                 {person.interactions.length === 0 ? (
-                    <div className="text-center py-12 bg-dark-card rounded-2xl border border-slate-700 border-dashed">
+                    <div className="text-center py-12 bg-dark-card rounded-2xl border border-slate-700 border-dashed ml-4">
                         <MessageSquare className="w-8 h-8 text-slate-600 mx-auto mb-3" />
                         <p className="text-slate-400">No interactions recorded yet.</p>
                         <p className="text-slate-500 text-sm">Log your first interaction above.</p>
                     </div>
                 ) : (
                     person.interactions.map(interaction => (
-                        <div key={interaction.id} className="group bg-dark-card p-5 rounded-xl border border-slate-700/50 hover:border-slate-600 transition-colors relative">
-                            
-                            {/* Interaction Actions */}
-                            {editingInteractionId !== interaction.id && (
-                                <button 
-                                    onClick={() => handleEditInteractionStart(interaction)}
-                                    className="absolute top-4 right-4 text-slate-600 hover:text-orbit-400 opacity-0 group-hover:opacity-100 transition-opacity"
-                                >
-                                    <Edit2 className="w-4 h-4" />
-                                </button>
-                            )}
+                        <div key={interaction.id} className="group relative ml-6">
+                            {/* Timeline Dot */}
+                            <div className="absolute -left-[33px] top-4 w-3 h-3 rounded-full bg-slate-800 border-2 border-slate-600 group-hover:border-orbit-500 group-hover:bg-orbit-500 transition-colors"></div>
 
-                            <div className="flex justify-between items-start mb-2">
-                                <div className="flex items-center gap-2">
-                                    <span className="bg-slate-800 text-slate-300 text-xs font-medium px-2 py-1 rounded uppercase tracking-wide">
-                                        {interaction.type}
-                                    </span>
-                                    <span className="text-slate-500 text-xs">
-                                        {new Date(interaction.date).toLocaleDateString(undefined, { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}
-                                    </span>
-                                </div>
-                            </div>
-                            
-                            {editingInteractionId === interaction.id && editInteractionData ? (
-                                <div className="mt-2 animate-fade-in space-y-3">
-                                    <div className="grid grid-cols-2 gap-3">
-                                        <input 
-                                            type="date"
-                                            className="bg-slate-800 border border-slate-700 rounded px-2 py-1 text-white text-xs"
-                                            value={editInteractionData.date.split('T')[0]}
-                                            onChange={e => setEditInteractionData({...editInteractionData, date: e.target.value})}
-                                        />
-                                        <select 
-                                            className="bg-slate-800 border border-slate-700 rounded px-2 py-1 text-white text-xs"
-                                            value={editInteractionData.type}
-                                            onChange={e => setEditInteractionData({...editInteractionData, type: e.target.value as InteractionType})}
-                                        >
-                                            {Object.values(InteractionType).map(t => <option key={t} value={t}>{t}</option>)}
-                                        </select>
+                            <div className="bg-dark-card p-5 rounded-xl border border-slate-700/50 hover:border-slate-600 transition-colors relative">
+                                {/* Interaction Actions */}
+                                {editingInteractionId !== interaction.id && (
+                                    <button 
+                                        onClick={() => handleEditInteractionStart(interaction)}
+                                        className="absolute top-4 right-4 text-slate-600 hover:text-orbit-400 opacity-0 group-hover:opacity-100 transition-opacity"
+                                    >
+                                        <Edit2 className="w-4 h-4" />
+                                    </button>
+                                )}
+
+                                <div className="flex justify-between items-start mb-2">
+                                    <div className="flex items-center gap-3">
+                                        <span className="text-white font-medium text-sm">
+                                            {formatDateReadable(interaction.date)}
+                                        </span>
+                                        <span className="text-slate-500 text-xs">
+                                            ({timeAgo(interaction.date)})
+                                        </span>
+                                        <span className="bg-slate-800 text-slate-300 text-[10px] font-bold px-2 py-0.5 rounded uppercase tracking-wide">
+                                            {interaction.type}
+                                        </span>
                                     </div>
-                                    <textarea 
-                                        className="w-full bg-slate-800 border border-slate-700 rounded-lg p-3 text-slate-200 text-sm outline-none focus:ring-2 focus:ring-orbit-500/50"
-                                        rows={3}
-                                        value={editInteractionData.notes}
-                                        onChange={(e) => setEditInteractionData({...editInteractionData, notes: e.target.value})}
-                                    />
-                                    <div className="flex gap-2 mt-2 justify-between items-center">
-                                        <button 
-                                            onClick={() => handleDeleteInteraction(interaction.id)}
-                                            className="text-red-500 hover:text-red-400 text-xs flex items-center gap-1"
-                                        >
-                                            <Trash2 className="w-3 h-3" /> Delete
-                                        </button>
-                                        <div className="flex gap-2">
-                                            <button 
-                                                onClick={() => setEditingInteractionId(null)}
-                                                className="text-xs text-slate-400 hover:text-white px-3 py-1"
+                                </div>
+                                
+                                {editingInteractionId === interaction.id && editInteractionData ? (
+                                    <div className="mt-2 animate-fade-in space-y-3">
+                                        <div className="grid grid-cols-2 gap-3">
+                                            <input 
+                                                type="date"
+                                                className="bg-slate-800 border border-slate-700 rounded px-2 py-1 text-white text-xs"
+                                                value={editInteractionData.date.split('T')[0]}
+                                                onChange={e => setEditInteractionData({...editInteractionData, date: e.target.value})}
+                                            />
+                                            <select 
+                                                className="bg-slate-800 border border-slate-700 rounded px-2 py-1 text-white text-xs"
+                                                value={editInteractionData.type}
+                                                onChange={e => setEditInteractionData({...editInteractionData, type: e.target.value as InteractionType})}
                                             >
-                                                Cancel
-                                            </button>
+                                                {Object.values(InteractionType).map(t => <option key={t} value={t}>{t}</option>)}
+                                            </select>
+                                        </div>
+                                        <textarea 
+                                            className="w-full bg-slate-800 border border-slate-700 rounded-lg p-3 text-slate-200 text-sm outline-none focus:ring-2 focus:ring-orbit-500/50"
+                                            rows={3}
+                                            value={editInteractionData.notes}
+                                            onChange={(e) => setEditInteractionData({...editInteractionData, notes: e.target.value})}
+                                        />
+                                        <div className="flex gap-2 mt-2 justify-between items-center">
                                             <button 
-                                                onClick={() => handleEditInteractionSave(interaction.id)}
-                                                className="bg-orbit-600 text-white text-xs px-3 py-1 rounded hover:bg-orbit-500"
+                                                onClick={() => handleDeleteInteraction(interaction.id)}
+                                                className="text-red-500 hover:text-red-400 text-xs flex items-center gap-1"
                                             >
-                                                Save Changes
+                                                <Trash2 className="w-3 h-3" /> Delete
                                             </button>
+                                            <div className="flex gap-2">
+                                                <button 
+                                                    onClick={() => setEditingInteractionId(null)}
+                                                    className="text-xs text-slate-400 hover:text-white px-3 py-1"
+                                                >
+                                                    Cancel
+                                                </button>
+                                                <button 
+                                                    onClick={() => handleEditInteractionSave(interaction.id)}
+                                                    className="bg-orbit-600 text-white text-xs px-3 py-1 rounded hover:bg-orbit-500"
+                                                >
+                                                    Save Changes
+                                                </button>
+                                            </div>
                                         </div>
                                     </div>
-                                </div>
-                            ) : (
-                                <p className="text-slate-200 leading-relaxed text-sm whitespace-pre-wrap">
-                                    {interaction.notes}
-                                </p>
-                            )}
+                                ) : (
+                                    <p className="text-slate-200 leading-relaxed text-sm whitespace-pre-wrap">
+                                        {interaction.notes}
+                                    </p>
+                                )}
+                            </div>
                         </div>
                     ))
                 )}
