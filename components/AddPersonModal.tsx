@@ -1,5 +1,6 @@
+
 import React, { useState, useEffect } from 'react';
-import { X, Check, User, Briefcase, Calendar, Star, AlignLeft, Phone, Smartphone, Circle as CircleIcon, Plus } from 'lucide-react';
+import { X, Check, User, Briefcase, Calendar, Star, AlignLeft, Phone, Smartphone, Circle as CircleIcon, Plus, Clock } from 'lucide-react';
 import { Person, Circle } from '../types';
 import { savePerson, getCircles, createNewCircle, generateId } from '../services/storageService';
 
@@ -213,6 +214,18 @@ export const AddPersonModal: React.FC<AddPersonModalProps> = ({ isOpen, onClose,
                 </div>
             </div>
 
+            <div className="space-y-2">
+                <label className="text-sm font-medium text-slate-300 flex items-center gap-2">
+                    <Phone className="w-3 h-3" /> Phone
+                </label>
+                <input 
+                    type="tel"
+                    value={form.phone}
+                    onChange={e => setForm({...form, phone: e.target.value})}
+                    className="w-full bg-dark-bg border border-slate-700 rounded-lg px-3 py-2 text-sm text-white focus:ring-2 focus:ring-orbit-500 outline-none"
+                />
+            </div>
+
             <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2">
                     <label className="text-sm font-medium text-slate-300 flex items-center gap-2">
@@ -227,18 +240,25 @@ export const AddPersonModal: React.FC<AddPersonModalProps> = ({ isOpen, onClose,
                 </div>
                  <div className="space-y-2">
                     <label className="text-sm font-medium text-slate-300 flex items-center gap-2">
-                        <Phone className="w-3 h-3" /> Phone
+                        <Clock className="w-3 h-3" /> Frequency
                     </label>
-                    <input 
-                        type="tel"
-                        value={form.phone}
-                        onChange={e => setForm({...form, phone: e.target.value})}
+                    <select 
+                        value={form.desiredFrequencyDays}
+                        onChange={e => setForm({...form, desiredFrequencyDays: Number(e.target.value)})}
                         className="w-full bg-dark-bg border border-slate-700 rounded-lg px-3 py-2 text-sm text-white focus:ring-2 focus:ring-orbit-500 outline-none"
-                    />
+                    >
+                        <option value={7}>Weekly</option>
+                        <option value={14}>Every 2 Weeks</option>
+                        <option value={30}>Monthly</option>
+                        <option value={60}>Every 2 Months</option>
+                        <option value={90}>Quarterly</option>
+                        <option value={180}>Every 6 Months</option>
+                        <option value={365}>Yearly</option>
+                    </select>
                 </div>
             </div>
             
-            {/* Circles Section (Replaced Tags) */}
+            {/* Circles Section */}
             <div className="space-y-3">
                 <div className="flex justify-between items-center">
                     <label className="text-sm font-medium text-slate-300 flex items-center gap-2">

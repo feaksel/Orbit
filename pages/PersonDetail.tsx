@@ -1,9 +1,10 @@
+
 import React, { useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { getPersonById, getCircles, addInteraction, updatePerson, updateInteraction, deleteInteraction } from '../services/storageService';
 import { Person, Circle, InteractionType, Interaction, Attachment } from '../types';
 import { HealthBadge, calculateHealthScore } from '../components/HealthBadge';
-import { ArrowLeft, Mail, Phone, MapPin, Calendar, Plus, MessageSquare, Edit2, Save, X, Star, Globe, Trash2, Link as LinkIcon, AlignLeft, Paperclip, FileText, Camera, Check, Tag } from 'lucide-react';
+import { ArrowLeft, Mail, Phone, MapPin, Calendar, Plus, MessageSquare, Edit2, Save, X, Star, Globe, Trash2, Link as LinkIcon, AlignLeft, Paperclip, FileText, Camera, Check, Tag, Clock } from 'lucide-react';
 import { InteractionModal } from '../components/InteractionModal';
 
 export const PersonDetail: React.FC = () => {
@@ -402,6 +403,29 @@ export const PersonDetail: React.FC = () => {
                                     {age !== null && <span className="text-slate-500 ml-1">({age} years old)</span>}
                                 </span>
                             ) : <span className="text-slate-600 italic">No birthday</span>
+                        )}
+                    </div>
+
+                    <div className="flex items-center gap-3 text-slate-300">
+                        <Clock className="w-4 h-4 text-slate-500" />
+                        {isEditingProfile ? (
+                            <div className="flex items-center gap-2 flex-1">
+                                <select 
+                                    className="flex-1 bg-slate-800 border border-slate-700 rounded px-2 py-1 text-white outline-none focus:ring-1 focus:ring-orbit-500 text-sm"
+                                    value={editForm.desiredFrequencyDays}
+                                    onChange={e => setEditForm({...editForm, desiredFrequencyDays: Number(e.target.value)})}
+                                >
+                                    <option value={7}>Weekly</option>
+                                    <option value={14}>Every 2 Weeks</option>
+                                    <option value={30}>Monthly</option>
+                                    <option value={60}>Every 2 Months</option>
+                                    <option value={90}>Quarterly</option>
+                                    <option value={180}>Every 6 Months</option>
+                                    <option value={365}>Yearly</option>
+                                </select>
+                            </div>
+                        ) : (
+                            <span>Every {person.desiredFrequencyDays} days</span>
                         )}
                     </div>
                 </div>
