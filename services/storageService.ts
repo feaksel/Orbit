@@ -7,6 +7,10 @@ const STORAGE_KEY_TASKS = 'orbit_tasks_v1';
 const SERVER_API_URL = '/api/data';
 
 export const DATA_UPDATE_EVENT = 'orbit-data-update';
+export const SYNC_STATUS_EVENT = 'orbit-sync-status';
+
+// Sync Status Types
+export type SyncStatus = 'idle' | 'syncing' | 'saved' | 'error' | 'offline';
 
 // Helper for Robust IDs
 export const generateId = (): string => {
@@ -22,6 +26,14 @@ let isSyncing = false;
 let isDirty = false; // Flag to track if we have unsaved local changes
 let lastDirtyTime = 0; // Track when we became dirty to prevent deadlocks
 let syncInterval: any = null;
+let currentStatus: SyncStatus = 'idle';
+
+const setSyncStatus = (status: SyncStatus) => {
+    currentStatus = status;
+    window.dispatchEvent(new CustomEvent(SYNC_STATUS_EVENT, { detail: status }));
+};
+
+export const getSyncStatus = () => currentStatus;
 
 export const startAutoSync = () => {
     // Run immediately on load
@@ -42,6 +54,7 @@ export const startAutoSync = () => {
 const triggerServerSync = () => {
     isDirty = true; // Mark as dirty immediately so we don't overwrite with incoming server data while typing
     lastDirtyTime = Date.now();
+    setSyncStatus('syncing');
     
     if (syncTimeout) clearTimeout(syncTimeout);
     syncTimeout = setTimeout(async () => {
@@ -65,19 +78,20 @@ const triggerServerSync = () => {
             if (res.ok) {
                 console.log('Synced to server/cloud');
                 isDirty = false; // Sync complete, safe to pull again
+                setSyncStatus('saved');
+                setTimeout(() => setSyncStatus('idle'), 2000);
             } else {
                 console.warn('Sync failed:', await res.text());
+                setSyncStatus('error');
+                // If save failed, we assume we are still dirty, but we update timestamp 
+                // so the deadlock breaker in initializeFromServer can eventually override if needed
+                lastDirtyTime = Date.now(); 
             }
         } catch (e) {
-            // Silent fail - offline mode
             console.debug('Sync skipped (Offline)');
+            setSyncStatus('offline');
         } finally {
             isSyncing = false;
-            
-            // DEADLOCK PROTECTION:
-            // If sync failed, we are still "dirty". But we shouldn't block reads forever.
-            // If the user stops interacting, we'll eventually retry or allow a pull.
-            // We don't force false here to avoid overwrite, but initializeFromServer handles the timeout.
         }
     }, 2000); // 2 second debounce to reduce cloud writes
 };
@@ -86,14 +100,15 @@ export const initializeFromServer = async (): Promise<boolean> => {
     // CRITICAL: If we have unsaved local changes (user is typing), do NOT pull from server
     // This prevents the "ghost typing" issue where server data overwrites local work.
     
-    // DEADLOCK FIX: If isDirty has been true for > 10 seconds, assume the sync failed/stuck
+    // DEADLOCK FIX: If isDirty has been true for > 15 seconds, assume the sync failed/stuck
     // and allow a pull to happen. Better to refresh data than stay broken offline.
-    if (isDirty && (Date.now() - lastDirtyTime < 10000)) {
-        return false;
-    } else if (isDirty) {
-        // Reset dirty flag if it expired
-        console.log("Sync lock expired, forcing refresh...");
-        isDirty = false;
+    if (isDirty) {
+        if (Date.now() - lastDirtyTime < 15000) {
+            return false; // Still waiting for valid save
+        } else {
+            console.warn("Sync lock expired (deadlock detected), forcing refresh...");
+            isDirty = false; // Force reset
+        }
     }
 
     try {
@@ -110,7 +125,10 @@ export const initializeFromServer = async (): Promise<boolean> => {
             }
         });
         
-        if (!response.ok) return false;
+        if (!response.ok) {
+            if (response.status !== 404) setSyncStatus('error');
+            return false;
+        }
         
         const data = await response.json();
         if (!data) return false;
@@ -140,6 +158,11 @@ export const initializeFromServer = async (): Promise<boolean> => {
             console.log("Received new data from cloud");
             window.dispatchEvent(new Event(DATA_UPDATE_EVENT));
         }
+        
+        if (currentStatus !== 'saved' && currentStatus !== 'syncing') {
+            setSyncStatus('idle');
+        }
+        
         return true;
     } catch (e) {
         // console.log("Could not initialize from server (Offline or First Run)");

@@ -1,20 +1,21 @@
 
 import React, { useEffect, useState } from 'react';
 import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip, BarChart, Bar, XAxis, YAxis, CartesianGrid } from 'recharts';
-import { getPeople, getCircles, addInteraction, getTasks, toggleTaskCompletion, DATA_UPDATE_EVENT } from '../services/storageService';
+import { getPeople, getCircles, addInteraction, getTasks, toggleTaskCompletion, DATA_UPDATE_EVENT, SYNC_STATUS_EVENT, getSyncStatus, SyncStatus } from '../services/storageService';
 import { Person, Circle, InteractionType, Task } from '../types';
 import { PersonCard } from '../components/PersonCard';
 import { MagicInput } from '../components/MagicInput';
 import { calculateHealthScore } from '../components/HealthBadge';
 import { InteractionModal } from '../components/InteractionModal';
 import { AddPersonModal } from '../components/AddPersonModal';
-import { Users, AlertTriangle, TrendingUp, Sparkles, Calendar, Gift, Plus, CheckCircle2, Circle as CircleIcon, Repeat, ArrowRight } from 'lucide-react';
+import { Users, AlertTriangle, TrendingUp, Sparkles, Calendar, Gift, Plus, CheckCircle2, Circle as CircleIcon, Repeat, ArrowRight, Cloud, CloudOff, RefreshCw } from 'lucide-react';
 import { Link } from 'react-router-dom';
 
 export const Dashboard: React.FC = () => {
   const [people, setPeople] = useState<Person[]>([]);
   const [circles, setCircles] = useState<Circle[]>([]);
   const [tasks, setTasks] = useState<Task[]>([]);
+  const [syncStatus, setSyncStatus] = useState<SyncStatus>(getSyncStatus());
   
   // Modal States
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -33,7 +34,10 @@ export const Dashboard: React.FC = () => {
     
     // Listen for sync updates from server or other tabs
     const handleDataUpdate = () => refreshData();
+    const handleSyncStatus = (e: Event) => setSyncStatus((e as CustomEvent).detail);
+
     window.addEventListener(DATA_UPDATE_EVENT, handleDataUpdate);
+    window.addEventListener(SYNC_STATUS_EVENT, handleSyncStatus);
 
     const handleOpenGroupLog = () => {
         setModalPersonId(undefined);
@@ -47,6 +51,7 @@ export const Dashboard: React.FC = () => {
     
     return () => {
         window.removeEventListener(DATA_UPDATE_EVENT, handleDataUpdate);
+        window.removeEventListener(SYNC_STATUS_EVENT, handleSyncStatus);
         window.removeEventListener('open-group-log', handleOpenGroupLog);
         window.removeEventListener('open-add-person', handleOpenAddPerson);
     };
@@ -121,7 +126,6 @@ export const Dashboard: React.FC = () => {
   const upcomingBirthdays = getUpcomingBirthdays();
   
   // Filter tasks: Not completed, and sort by date.
-  // We prioritize showing tasks that have a date set.
   const upcomingTasks = tasks
     .filter(t => !t.isCompleted)
     .sort((a, b) => {
@@ -130,7 +134,7 @@ export const Dashboard: React.FC = () => {
         if (!b.date) return -1;
         return a.date.localeCompare(b.date);
     })
-    .slice(0, 5); // Show top 5
+    .slice(0, 5); 
 
   // Prepare Bar Chart Data
   const getMonthlyInteractionCount = () => {
@@ -159,6 +163,15 @@ export const Dashboard: React.FC = () => {
   
   const barData = getMonthlyInteractionCount();
 
+  // Status Indicator Component
+  const StatusIndicator = () => {
+    if (syncStatus === 'syncing') return <div className="flex items-center gap-1 text-xs text-orbit-400 bg-orbit-400/10 px-2 py-1 rounded-full"><RefreshCw className="w-3 h-3 animate-spin" /> Syncing...</div>;
+    if (syncStatus === 'saved') return <div className="flex items-center gap-1 text-xs text-green-400 bg-green-400/10 px-2 py-1 rounded-full"><Cloud className="w-3 h-3" /> Synced</div>;
+    if (syncStatus === 'error') return <div className="flex items-center gap-1 text-xs text-red-400 bg-red-400/10 px-2 py-1 rounded-full"><AlertTriangle className="w-3 h-3" /> Sync Error</div>;
+    if (syncStatus === 'offline') return <div className="flex items-center gap-1 text-xs text-slate-400 bg-slate-400/10 px-2 py-1 rounded-full"><CloudOff className="w-3 h-3" /> Offline</div>;
+    return <div className="flex items-center gap-1 text-xs text-slate-500 px-2 py-1"><Cloud className="w-3 h-3" /> Connected</div>;
+  };
+
   return (
     <div className="p-6 max-w-7xl mx-auto space-y-8 animate-fade-in pb-24 md:pb-6">
       {/* Header & Magic Input */}
@@ -172,7 +185,10 @@ export const Dashboard: React.FC = () => {
                 <Plus className="w-5 h-5" />
             </button>
         </div>
-        <p className="text-slate-400 mb-8">Stay connected with the people who matter most.</p>
+        <div className="flex justify-center mb-6">
+            <StatusIndicator />
+        </div>
+        
         <MagicInput onUpdate={refreshData} />
         
         {/* Desktop Actions */}
@@ -384,7 +400,7 @@ export const Dashboard: React.FC = () => {
             </div>
         </div>
         
-        {/* Activity Bar Chart (Expanded to fill since Priority Actions moved) */}
+        {/* Activity Bar Chart */}
         <div className="bg-dark-card p-6 rounded-2xl border border-slate-700/50 lg:col-span-2">
             <h2 className="text-lg font-semibold text-white mb-6 flex items-center gap-2">
                 <Calendar className="w-5 h-5 text-orbit-500" />

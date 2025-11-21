@@ -29,20 +29,23 @@ export default async function handler(req, res) {
     // 2. Cloud Storage (Vercel KV / Redis)
     if (hasKV) {
         try {
-            const kvUrl = process.env.KV_REST_API_URL;
+            // Remove trailing slash if present to avoid double slashes
+            const kvBaseUrl = process.env.KV_REST_API_URL.replace(/\/$/, '');
             const kvToken = process.env.KV_REST_API_TOKEN;
 
             if (req.method === 'GET') {
-                // Command: GET orbit_data
-                // We use the REST endpoint: POST / with body ["GET", "key"] for robustness
-                const response = await fetch(kvUrl, {
-                    method: 'POST',
+                // Use the explicit GET endpoint: /get/key
+                const response = await fetch(`${kvBaseUrl}/get/orbit_data`, {
+                    method: 'GET', // Vercel/Upstash GET endpoint is a GET request
                     headers: { Authorization: `Bearer ${kvToken}` },
-                    body: JSON.stringify(["GET", "orbit_data"]),
                     cache: 'no-store'
                 });
 
-                if (!response.ok) throw new Error(`KV Read Error: ${response.statusText}`);
+                if (!response.ok) {
+                    const errText = await response.text();
+                    console.error(`KV Read Error (${response.status}):`, errText);
+                    throw new Error(`KV Read Error: ${response.statusText}`);
+                }
                 
                 const json = await response.json();
                 // Upstash/KV returns { result: "stringified_json" } or { result: null }
@@ -55,21 +58,29 @@ export default async function handler(req, res) {
             }
 
             if (req.method === 'POST') {
-                // Command: SET orbit_data value
-                // We store the entire body as a JSON string
-                const response = await fetch(kvUrl, {
+                // Use the explicit SET endpoint: /set/key (body is value)
+                // Note: For complex JSON objects, stringifying them is safest to preserve structure
+                const response = await fetch(`${kvBaseUrl}/set/orbit_data`, {
                     method: 'POST',
-                    headers: { Authorization: `Bearer ${kvToken}` },
-                    body: JSON.stringify(["SET", "orbit_data", JSON.stringify(req.body)]),
+                    headers: { 
+                        Authorization: `Bearer ${kvToken}`,
+                        // Upstash expects raw body or text for simple set, but for json we can pass directly
+                    },
+                    body: JSON.stringify(req.body),
                     cache: 'no-store'
                 });
 
-                if (!response.ok) throw new Error(`KV Write Error: ${response.statusText}`);
+                if (!response.ok) {
+                    const errText = await response.text();
+                    console.error(`KV Write Error (${response.status}):`, errText);
+                    throw new Error(`KV Write Error: ${response.statusText}`);
+                }
                 
                 return res.status(200).json({ success: true, source: 'cloud' });
             }
         } catch (error) {
             console.error('Cloud Persistence Error:', error);
+            // Return 500 so client knows sync failed and can show error status
             return res.status(500).json({ error: 'Cloud Storage Failed', details: error.message });
         }
     }
