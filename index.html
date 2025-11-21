@@ -4,6 +4,17 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>Orbit - Relationship Manager</title>
+    
+    <!-- Mobile Theme Colors -->
+    <meta name="theme-color" content="#0f172a" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+    
+    <!-- Icons -->
+    <link rel="apple-touch-icon" href="https://ui-avatars.com/api/?name=Orbit&background=0ea5e9&color=fff&rounded=true&bold=true" />
+    <link rel="icon" type="image/png" href="https://ui-avatars.com/api/?name=Orbit&background=0ea5e9&color=fff&rounded=true&bold=true" />
+    <link rel="manifest" href="/manifest.json" />
+
     <script src="https://cdn.tailwindcss.com"></script>
     <script>
       tailwind.config = {
@@ -53,17 +64,19 @@
 {
   "imports": {
     "react": "https://aistudiocdn.com/react@^19.2.0",
+    "react-dom/": "https://aistudiocdn.com/react-dom@^19.2.0/",
     "react/": "https://aistudiocdn.com/react@^19.2.0/",
-    "lucide-react": "https://aistudiocdn.com/lucide-react@^0.554.0",
     "@google/genai": "https://aistudiocdn.com/@google/genai@^1.30.0",
+    "lucide-react": "https://aistudiocdn.com/lucide-react@^0.554.0",
     "react-router-dom": "https://aistudiocdn.com/react-router-dom@^7.9.6",
-    "recharts": "https://aistudiocdn.com/recharts@^3.4.1",
-    "react-dom/": "https://aistudiocdn.com/react-dom@^19.2.0/"
+    "recharts": "https://aistudiocdn.com/recharts@^3.4.1"
   }
 }
 </script>
 </head>
   <body>
     <div id="root"></div>
+    <!-- CRITICAL: Entry point for Vite -->
+    <script type="module" src="/src/index.tsx"></script>
   </body>
 </html>
