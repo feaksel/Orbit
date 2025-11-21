@@ -1,6 +1,7 @@
 
 import fs from 'fs';
 import path from 'path';
+import { createClient } from 'redis';
 
 export default async function handler(req, res) {
     // Enable CORS
@@ -22,82 +23,96 @@ export default async function handler(req, res) {
         return;
     }
 
-    // 1. Environment Detection
-    const isVercel = process.env.VERCEL === '1';
-    const hasKV = !!process.env.KV_REST_API_URL;
+    // Safe Parse Body
+    let body = req.body;
+    if (req.method === 'POST' && typeof body === 'string') {
+        try { body = JSON.parse(body); } catch (e) { console.error("Body parse failed", e); }
+    }
 
-    // 2. Cloud Storage (Vercel KV / Redis)
-    if (hasKV) {
+    // 1. Try Native Redis Client (Preferred if 'redis' is installed and URL exists)
+    // This supports 'redis-orange-queen' and other direct integrations.
+    const redisUrl = process.env.KV_URL || process.env.REDIS_URL;
+    
+    if (redisUrl) {
         try {
-            // Remove trailing slash if present to avoid double slashes
+            const client = createClient({ url: redisUrl });
+            client.on('error', err => console.error('Redis Client Error', err));
+            
+            await client.connect();
+
+            if (req.method === 'GET') {
+                const value = await client.get('orbit_data');
+                await client.disconnect();
+                return res.status(200).json(value ? JSON.parse(value) : null);
+            }
+
+            if (req.method === 'POST') {
+                // Store as a stringified JSON blob
+                await client.set('orbit_data', JSON.stringify(body));
+                await client.disconnect();
+                return res.status(200).json({ success: true, source: 'redis' });
+            }
+        } catch (error) {
+            console.error('Redis Connection Error:', error);
+            // Do not return here, let it fall through to try REST or Local as backup
+            // unless it was a hard failure
+            if (!process.env.KV_REST_API_URL) {
+                 return res.status(500).json({ error: 'Redis Error', details: error.message });
+            }
+        }
+    }
+
+    // 2. Try Vercel KV REST API (Alternative)
+    const hasKVRest = !!process.env.KV_REST_API_URL;
+    if (hasKVRest) {
+        try {
             const kvBaseUrl = process.env.KV_REST_API_URL.replace(/\/$/, '');
             const kvToken = process.env.KV_REST_API_TOKEN;
 
             if (req.method === 'GET') {
-                // Use the explicit GET endpoint: /get/key
                 const response = await fetch(`${kvBaseUrl}/get/orbit_data`, {
-                    method: 'GET', // Vercel/Upstash GET endpoint is a GET request
+                    method: 'GET',
                     headers: { Authorization: `Bearer ${kvToken}` },
                     cache: 'no-store'
                 });
 
-                if (!response.ok) {
-                    const errText = await response.text();
-                    console.error(`KV Read Error (${response.status}):`, errText);
-                    throw new Error(`KV Read Error: ${response.statusText}`);
-                }
-                
+                if (!response.ok) throw new Error(response.statusText);
                 const json = await response.json();
-                // Upstash/KV returns { result: "stringified_json" } or { result: null }
                 const result = json.result;
-
-                if (!result) return res.status(200).json(null);
                 
-                // If stored as a string, parse it. If stored as JSON object, use as is.
-                return res.status(200).json(typeof result === 'string' ? JSON.parse(result) : result);
+                return res.status(200).json(typeof result === 'string' ? JSON.parse(result) : (result || null));
             }
 
             if (req.method === 'POST') {
-                // Use the explicit SET endpoint: /set/key (body is value)
-                // Note: For complex JSON objects, stringifying them is safest to preserve structure
                 const response = await fetch(`${kvBaseUrl}/set/orbit_data`, {
                     method: 'POST',
-                    headers: { 
-                        Authorization: `Bearer ${kvToken}`,
-                        // Upstash expects raw body or text for simple set, but for json we can pass directly
-                    },
-                    body: JSON.stringify(req.body),
+                    headers: { Authorization: `Bearer ${kvToken}` },
+                    body: JSON.stringify(body),
                     cache: 'no-store'
                 });
 
-                if (!response.ok) {
-                    const errText = await response.text();
-                    console.error(`KV Write Error (${response.status}):`, errText);
-                    throw new Error(`KV Write Error: ${response.statusText}`);
-                }
-                
-                return res.status(200).json({ success: true, source: 'cloud' });
+                if (!response.ok) throw new Error(response.statusText);
+                return res.status(200).json({ success: true, source: 'kv-rest' });
             }
         } catch (error) {
-            console.error('Cloud Persistence Error:', error);
-            // Return 500 so client knows sync failed and can show error status
+            console.error('KV REST Error:', error);
             return res.status(500).json({ error: 'Cloud Storage Failed', details: error.message });
         }
     }
 
     // 3. Fallback: Local File System (Only for local dev)
-    // If running on Vercel WITHOUT KV, this is where data gets lost.
-    // We return an error on Vercel to warn the user.
+    const isVercel = process.env.VERCEL === '1';
+    
+    // If running on Vercel but no DB configured, we must fail loudly
     if (isVercel && req.method === 'POST') {
         return res.status(500).json({ 
             error: "Database Not Configured", 
-            message: "Orbit is running on Vercel but Vercel KV is not linked. Data will not persist. Please link a KV store in Vercel Dashboard." 
+            message: "Vercel detected but no Redis/KV URL found. Please link a database." 
         });
     }
 
-    // Local Development Handler
+    // Local Development File Handler
     const LOCAL_DB_FILE = path.join(process.cwd(), 'orbit_database.json');
-
     try {
         if (req.method === 'GET') {
             if (fs.existsSync(LOCAL_DB_FILE)) {
@@ -108,8 +123,8 @@ export default async function handler(req, res) {
         }
 
         if (req.method === 'POST') {
-            fs.writeFileSync(LOCAL_DB_FILE, JSON.stringify(req.body, null, 2));
-            return res.status(200).json({ success: true, source: 'local' });
+            fs.writeFileSync(LOCAL_DB_FILE, JSON.stringify(body, null, 2));
+            return res.status(200).json({ success: true, source: 'local-file' });
         }
     } catch (error) {
         console.error('Local Persistence Error:', error);

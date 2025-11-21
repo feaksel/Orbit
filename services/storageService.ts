@@ -52,7 +52,7 @@ export const startAutoSync = () => {
 
 // Saves current local state to the server (Debounced)
 const triggerServerSync = () => {
-    isDirty = true; // Mark as dirty immediately so we don't overwrite with incoming server data while typing
+    isDirty = true; // Mark as dirty immediately
     lastDirtyTime = Date.now();
     setSyncStatus('syncing');
     
@@ -69,7 +69,10 @@ const triggerServerSync = () => {
                 metadata: { lastUpdated: new Date().toISOString() }
             };
             
-            const res = await fetch(SERVER_API_URL, {
+            // Add timestamp to URL to bypass aggressive caching on some networks
+            const uniqueUrl = `${SERVER_API_URL}?t=${Date.now()}`;
+            
+            const res = await fetch(uniqueUrl, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify(data)
@@ -84,7 +87,6 @@ const triggerServerSync = () => {
                 console.warn('Sync failed:', await res.text());
                 setSyncStatus('error');
                 // If save failed, we assume we are still dirty, but we update timestamp 
-                // so the deadlock breaker in initializeFromServer can eventually override if needed
                 lastDirtyTime = Date.now(); 
             }
         } catch (e) {
@@ -100,10 +102,9 @@ export const initializeFromServer = async (): Promise<boolean> => {
     // CRITICAL: If we have unsaved local changes (user is typing), do NOT pull from server
     // This prevents the "ghost typing" issue where server data overwrites local work.
     
-    // DEADLOCK FIX: If isDirty has been true for > 15 seconds, assume the sync failed/stuck
-    // and allow a pull to happen. Better to refresh data than stay broken offline.
+    // DEADLOCK FIX: Reduced timeout to 10s to recover faster from failed saves
     if (isDirty) {
-        if (Date.now() - lastDirtyTime < 15000) {
+        if (Date.now() - lastDirtyTime < 10000) {
             return false; // Still waiting for valid save
         } else {
             console.warn("Sync lock expired (deadlock detected), forcing refresh...");
