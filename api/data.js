@@ -40,7 +40,8 @@ export default async function handler(req, res) {
             
             await client.connect();
 
-            if (req.method === 'GET') {
+            // Handle GET or POST "fetch_latest" (Legacy Support for cached clients)
+            if (req.method === 'GET' || (req.method === 'POST' && body && body.action === 'fetch_latest')) {
                 const value = await client.get('orbit_data');
                 await client.disconnect();
                 return res.status(200).json(value ? JSON.parse(value) : null);
@@ -69,7 +70,7 @@ export default async function handler(req, res) {
             const kvBaseUrl = process.env.KV_REST_API_URL.replace(/\/$/, '');
             const kvToken = process.env.KV_REST_API_TOKEN;
 
-            if (req.method === 'GET') {
+            if (req.method === 'GET' || (req.method === 'POST' && body && body.action === 'fetch_latest')) {
                 const response = await fetch(`${kvBaseUrl}/get/orbit_data`, {
                     method: 'GET',
                     headers: { Authorization: `Bearer ${kvToken}` },
@@ -114,7 +115,7 @@ export default async function handler(req, res) {
     // Local Development File Handler
     const LOCAL_DB_FILE = path.join(process.cwd(), 'orbit_database.json');
     try {
-        if (req.method === 'GET') {
+        if (req.method === 'GET' || (req.method === 'POST' && body && body.action === 'fetch_latest')) {
             if (fs.existsSync(LOCAL_DB_FILE)) {
                 const data = fs.readFileSync(LOCAL_DB_FILE, 'utf-8');
                 return res.status(200).json(JSON.parse(data));

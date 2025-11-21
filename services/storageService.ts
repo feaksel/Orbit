@@ -116,26 +116,19 @@ export const initializeFromServer = async (): Promise<boolean> => {
         // Add timestamp to force bypass browser cache and Vercel edge cache
         const uniqueUrl = `${SERVER_API_URL}?t=${Date.now()}&r=${Math.random()}`;
         
+        // CHANGED: Reverted to GET to prevent database overwrites
         const response = await fetch(uniqueUrl, {
-            method: 'POST', // Using POST to avoid aggressive caching on some edge networks if GET is sticky
-            cache: 'no-store',
+            method: 'GET', 
             headers: { 
-                'Content-Type': 'application/json', // Some proxies need this
+                'Content-Type': 'application/json',
                 'Cache-Control': 'no-cache, no-store, must-revalidate',
                 'Pragma': 'no-cache',
                 'Expires': '0'
-            },
-            // Sending a body makes it a non-simple request, often bypassing cache
-            body: JSON.stringify({ action: 'fetch_latest' }) 
+            }
         });
         
-        // Fallback to GET if POST fails (e.g. static file host)
         let data;
-        if (response.status === 405 || response.status === 404) {
-             const getResponse = await fetch(`${SERVER_API_URL}?t=${Date.now()}`);
-             if (!getResponse.ok) return false;
-             data = await getResponse.json();
-        } else if (!response.ok) {
+        if (!response.ok) {
             if (response.status !== 404) setSyncStatus('error');
             return false;
         } else {
@@ -143,6 +136,11 @@ export const initializeFromServer = async (): Promise<boolean> => {
         }
 
         if (!data) return false;
+
+        // Check if this is just a success message from a POST save (legacy bug handling)
+        if (data.success && !data.people && !data.circles) {
+             return false;
+        }
 
         let hasChanges = false;
 
