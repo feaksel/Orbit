@@ -334,6 +334,12 @@ export const updatePerson = (personId: string, updates: Partial<Person>): Person
   return people[index];
 };
 
+export const snoozePerson = (personId: string, days: number): void => {
+    const date = new Date();
+    date.setDate(date.getDate() + days);
+    updatePerson(personId, { snoozeUntil: date.toISOString() });
+};
+
 export const deletePerson = (personId: string): void => {
     let people = getPeople();
     people = people.filter(p => p.id !== personId);
@@ -360,6 +366,9 @@ export const addInteraction = (personId: string, interaction: Omit<Interaction, 
     if (!person.lastContactDate || new Date(interaction.date) > new Date(person.lastContactDate)) {
       person.lastContactDate = interaction.date;
     }
+    
+    // Clear snooze when interaction is added
+    person.snoozeUntil = undefined;
     
     savePerson(person);
     // savePerson triggers sync

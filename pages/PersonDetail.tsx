@@ -4,7 +4,7 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { getPersonById, getCircles, addInteraction, updatePerson, updateInteraction, deleteInteraction, deletePerson, DATA_UPDATE_EVENT, getTasks } from '../services/storageService';
 import { Person, Circle, InteractionType, Interaction, Attachment, Task } from '../types';
 import { HealthBadge, calculateHealthScore } from '../components/HealthBadge';
-import { ArrowLeft, Mail, Phone, MapPin, Calendar, Plus, MessageSquare, Edit2, Save, X, Star, Globe, Trash2, Link as LinkIcon, AlignLeft, Paperclip, FileText, Camera, Check, Tag, Clock, AlertTriangle, Briefcase, CheckCircle2, ExternalLink } from 'lucide-react';
+import { ArrowLeft, Mail, Phone, MapPin, Calendar, Plus, MessageSquare, Edit2, Save, X, Star, Globe, Trash2, Link as LinkIcon, AlignLeft, Paperclip, FileText, Camera, Check, Tag, Clock, AlertTriangle, Briefcase, CheckCircle2, ExternalLink, Zap, Sparkles } from 'lucide-react';
 import { InteractionModal } from '../components/InteractionModal';
 import { timeAgo, formatDateReadable } from '../utils/dateUtils';
 import { generateGoogleCalendarUrl } from '../utils/calendarUtils';
@@ -36,6 +36,9 @@ export const PersonDetail: React.FC = () => {
   const [newNoteText, setNewNoteText] = useState('');
 
   const [newTag, setNewTag] = useState('');
+
+  // Template Menu
+  const [showTemplates, setShowTemplates] = useState(false);
 
   // Log Modal
   const [isLogModalOpen, setIsLogModalOpen] = useState(false);
@@ -244,6 +247,40 @@ export const PersonDetail: React.FC = () => {
       return age;
   };
 
+  const isBirthdayUpcoming = () => {
+    if (!person?.birthday) return false;
+    const today = new Date();
+    const bday = new Date(person.birthday);
+    const nextBday = new Date(today.getFullYear(), bday.getMonth(), bday.getDate());
+    if (nextBday < today) nextBday.setFullYear(today.getFullYear() + 1);
+    
+    const diffTime = Math.abs(nextBday.getTime() - today.getTime());
+    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+    return diffDays <= 7;
+  };
+
+  const getTemplates = () => {
+      const list = [
+          { label: "Just Checking In", text: "Hey! Been a while, just wanted to check in and see how you're doing?" },
+          { label: "Catch Up Soon?", text: "Hey! It's been too long. Would love to grab coffee/lunch soon if you're free?" },
+          { label: "Thinking of You", text: "Thinking of you! Hope everything is going well." }
+      ];
+      if (isBirthdayUpcoming()) {
+          list.unshift({ label: "Happy Birthday", text: "Happy Birthday! 🎉 Hope you have a fantastic day!" });
+      }
+      return list;
+  };
+
+  const handleTemplateClick = (text: string) => {
+      if (!person) return;
+      // Prefer SMS if mobile-ish context or phone available, else mailto
+      const link = person.phone 
+        ? `sms:${person.phone}?body=${encodeURIComponent(text)}` 
+        : `mailto:${person.email || ''}?body=${encodeURIComponent(text)}`;
+      window.open(link, '_blank');
+      setShowTemplates(false);
+  };
+
   if (!person) return <div className="p-8 text-white">Loading...</div>;
 
   const healthScore = calculateHealthScore(person.lastContactDate, person.desiredFrequencyDays);
@@ -392,6 +429,33 @@ export const PersonDetail: React.FC = () => {
                     ) : null}
 
                     <div className="flex gap-2 justify-center">
+                        {/* Quick Connect Magic Wand */}
+                        <div className="relative">
+                            <button 
+                                onClick={() => setShowTemplates(!showTemplates)}
+                                className="bg-white hover:bg-slate-200 text-slate-900 p-2.5 rounded-lg transition-colors shadow-lg"
+                                title="Rapid Reach-out"
+                            >
+                                <Sparkles className="w-4 h-4" />
+                            </button>
+                            {showTemplates && (
+                                <div className="absolute top-full left-0 mt-2 w-48 bg-dark-card border border-slate-700 rounded-xl shadow-2xl z-50 text-left overflow-hidden animate-fade-in">
+                                    <div className="p-2 text-[10px] font-bold text-slate-500 uppercase tracking-wider bg-slate-800/50">
+                                        Quick Templates
+                                    </div>
+                                    {getTemplates().map(t => (
+                                        <button 
+                                            key={t.label}
+                                            onClick={() => handleTemplateClick(t.text)}
+                                            className="w-full text-left px-3 py-2 text-xs text-white hover:bg-orbit-600 transition-colors border-b border-slate-800 last:border-0"
+                                        >
+                                            {t.label}
+                                        </button>
+                                    ))}
+                                </div>
+                            )}
+                        </div>
+
                          <a href={`tel:${person.phone}`} className={`bg-green-600 hover:bg-green-500 text-white p-2.5 rounded-lg flex items-center justify-center transition-colors ${!person.phone && 'opacity-50 cursor-not-allowed pointer-events-none'}`}>
                             <Phone className="w-4 h-4" />
                         </a>

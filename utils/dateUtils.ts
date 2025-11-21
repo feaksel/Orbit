@@ -33,3 +33,7 @@ export const formatDateReadable = (dateStr: string): string => {
         day: 'numeric' 
     });
 };
+
+export const isSameMonthAndDay = (date1: Date, date2: Date): boolean => {
+    return date1.getMonth() === date2.getMonth() && date1.getDate() === date2.getDate();
+};

@@ -1,16 +1,17 @@
 
 import React, { useEffect, useState } from 'react';
 import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip } from 'recharts';
-import { getPeople, getCircles, addInteraction, getTasks, toggleTaskCompletion, DATA_UPDATE_EVENT, SYNC_STATUS_EVENT, getSyncStatus, SyncStatus } from '../services/storageService';
+import { getPeople, getCircles, addInteraction, getTasks, toggleTaskCompletion, snoozePerson, DATA_UPDATE_EVENT, SYNC_STATUS_EVENT, getSyncStatus, SyncStatus } from '../services/storageService';
 import { Person, Circle, InteractionType, Task } from '../types';
 import { PersonCard } from '../components/PersonCard';
 import { MagicInput } from '../components/MagicInput';
 import { calculateHealthScore } from '../components/HealthBadge';
 import { InteractionModal } from '../components/InteractionModal';
 import { AddPersonModal } from '../components/AddPersonModal';
-import { Users, AlertTriangle, TrendingUp, Sparkles, Calendar, Gift, Plus, CheckCircle2, Circle as CircleIcon, Repeat, ArrowRight, Cloud, CloudOff, RefreshCw, MessageSquare, Clock, BarChart3, Layout } from 'lucide-react';
+import { MorningBriefing } from '../components/MorningBriefing';
+import { Users, AlertTriangle, TrendingUp, Sparkles, Calendar, Gift, Plus, CheckCircle2, Circle as CircleIcon, Repeat, ArrowRight, Cloud, CloudOff, RefreshCw, MessageSquare, Clock, BarChart3, Layout, History, Heart } from 'lucide-react';
 import { Link, useNavigate } from 'react-router-dom';
-import { timeAgo, formatDateReadable } from '../utils/dateUtils';
+import { timeAgo, formatDateReadable, isSameMonthAndDay } from '../utils/dateUtils';
 import { generateGoogleCalendarUrl } from '../utils/calendarUtils';
 
 export const Dashboard: React.FC = () => {
@@ -21,7 +22,7 @@ export const Dashboard: React.FC = () => {
   const [syncStatus, setSyncStatus] = useState<SyncStatus>(getSyncStatus());
   
   // View State
-  const [insightTab, setInsightTab] = useState<'activity' | 'distribution'>('activity');
+  const [insightTab, setInsightTab] = useState<'activity' | 'distribution' | 'memories'>('activity');
   
   // Modal States
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -69,6 +70,12 @@ export const Dashboard: React.FC = () => {
     setIsModalOpen(true);
   };
 
+  const handleSnooze = (personId: string, e: React.MouseEvent) => {
+      e.stopPropagation();
+      snoozePerson(personId, 3); // Snooze for 3 days
+      refreshData();
+  };
+
   const handleGroupLogClick = () => {
     setModalPersonId(undefined);
     setIsModalOpen(true);
@@ -103,7 +110,14 @@ export const Dashboard: React.FC = () => {
 
   // Analytics
   const totalContacts = people.length;
-  const overdueContacts = people.filter(p => calculateHealthScore(p.lastContactDate, p.desiredFrequencyDays) < 50);
+  
+  const overdueContacts = people.filter(p => {
+      const score = calculateHealthScore(p.lastContactDate, p.desiredFrequencyDays);
+      // Filter out snoozed people
+      const isSnoozed = p.snoozeUntil && new Date(p.snoozeUntil) > new Date();
+      return score < 50 && !isSnoozed;
+  });
+
   const healthyContacts = people.filter(p => calculateHealthScore(p.lastContactDate, p.desiredFrequencyDays) >= 80);
   
   const circleData = circles.map(c => ({
@@ -167,6 +181,29 @@ export const Dashboard: React.FC = () => {
   };
   const globalFeed = getGlobalFeed();
 
+  // MEMORY LANE GENERATOR
+  const getMemories = () => {
+      const today = new Date();
+      let memories: any[] = [];
+      people.forEach(p => {
+          p.interactions.forEach(i => {
+              const d = new Date(i.date);
+              if (isSameMonthAndDay(d, today) && d.getFullYear() !== today.getFullYear()) {
+                  const yearsAgo = today.getFullYear() - d.getFullYear();
+                  memories.push({
+                      ...i,
+                      personName: p.name,
+                      personId: p.id,
+                      personAvatar: p.avatar,
+                      yearsAgo
+                  });
+              }
+          });
+      });
+      return memories.sort((a, b) => b.yearsAgo - a.yearsAgo);
+  };
+  const memories = getMemories();
+
   // Status Indicator Component
   const StatusIndicator = () => {
     if (syncStatus === 'syncing') return <div className="flex items-center gap-1 text-[10px] text-orbit-400 bg-orbit-400/10 px-1.5 py-0.5 rounded-full"><RefreshCw className="w-2.5 h-2.5 animate-spin" /> Syncing</div>;
@@ -178,8 +215,10 @@ export const Dashboard: React.FC = () => {
 
   return (
     <div className="p-4 max-w-7xl mx-auto space-y-4 animate-fade-in pb-24 md:pb-6">
+      <MorningBriefing people={people} tasks={tasks} onDismiss={() => {}} />
+
       {/* Header & Magic Input - Compact Version */}
-      <header className="mb-4 relative">
+      <header className="mb-2 relative">
         <div className="flex flex-col md:flex-row gap-3 md:items-center">
             <div className="flex-1">
                 <MagicInput onUpdate={refreshData} />
@@ -192,14 +231,14 @@ export const Dashboard: React.FC = () => {
                 <div className="flex gap-2">
                     <button 
                         onClick={() => setIsAddPersonOpen(true)}
-                        className="flex items-center gap-1.5 px-3 py-2 bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white rounded-lg text-xs font-medium border border-slate-700 transition-colors"
+                        className="flex items-center gap-1.5 px-3 py-1.5 bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white rounded-lg text-xs font-medium border border-slate-700 transition-colors"
                     >
                         <Plus className="w-3.5 h-3.5" />
                         <span>Add</span>
                     </button>
                     <button 
                         onClick={handleGroupLogClick}
-                        className="flex items-center gap-1.5 px-3 py-2 bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white rounded-lg text-xs font-medium border border-slate-700 transition-colors"
+                        className="flex items-center gap-1.5 px-3 py-1.5 bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white rounded-lg text-xs font-medium border border-slate-700 transition-colors"
                     >
                         <Users className="w-3.5 h-3.5" />
                         <span>Log</span>
@@ -213,9 +252,9 @@ export const Dashboard: React.FC = () => {
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
         
         {/* Column 1 (Top on mobile): Priority Reconnects (RELATIONSHIPS FIRST) */}
-        <div className="bg-dark-card rounded-xl border border-slate-700/50 p-4 flex flex-col">
-             <div className="flex items-center justify-between mb-3">
-                <h2 className="text-base font-bold text-white flex items-center gap-2">
+        <div className="bg-dark-card rounded-xl border border-slate-700/50 p-3 flex flex-col">
+             <div className="flex items-center justify-between mb-2">
+                <h2 className="text-sm font-bold text-white flex items-center gap-2">
                     <AlertTriangle className="w-4 h-4 text-yellow-500" />
                     Needs Attention
                 </h2>
@@ -233,7 +272,7 @@ export const Dashboard: React.FC = () => {
                          <div 
                             key={p.id}
                             onClick={() => navigate(`/person/${p.id}`)}
-                            className="bg-slate-800/30 p-2 rounded-lg border border-slate-700/50 hover:border-red-500/30 hover:bg-slate-800/80 transition-all cursor-pointer flex items-center gap-2"
+                            className="bg-slate-800/30 p-2 rounded-lg border border-slate-700/50 hover:border-red-500/30 hover:bg-slate-800/80 transition-all cursor-pointer flex items-center gap-2 group relative"
                          >
                             <div className="relative shrink-0">
                                 <img src={p.avatar || `https://ui-avatars.com/api/?name=${p.name}`} className="w-8 h-8 rounded-full bg-slate-700" alt="" />
@@ -245,12 +284,22 @@ export const Dashboard: React.FC = () => {
                                     {p.lastContactDate ? timeAgo(p.lastContactDate) : 'Never contacted'}
                                 </p>
                             </div>
-                            <button 
-                                onClick={(e) => handleQuickLog(p.id, e)}
-                                className="shrink-0 p-1.5 text-slate-500 hover:text-green-500 hover:bg-green-500/10 rounded-full transition-colors"
-                            >
-                                <CheckCircle2 className="w-4 h-4" />
-                            </button>
+                            <div className="flex items-center gap-1">
+                                <button 
+                                    onClick={(e) => handleSnooze(p.id, e)}
+                                    className="p-1.5 text-slate-500 hover:text-blue-400 hover:bg-blue-400/10 rounded-full transition-colors opacity-0 group-hover:opacity-100"
+                                    title="Snooze for 3 days"
+                                >
+                                    <Clock className="w-3.5 h-3.5" />
+                                </button>
+                                <button 
+                                    onClick={(e) => handleQuickLog(p.id, e)}
+                                    className="p-1.5 text-slate-500 hover:text-green-500 hover:bg-green-500/10 rounded-full transition-colors"
+                                    title="Log Interaction"
+                                >
+                                    <CheckCircle2 className="w-4 h-4" />
+                                </button>
+                            </div>
                          </div>
                     ))
                 )}
@@ -258,16 +307,16 @@ export const Dashboard: React.FC = () => {
         </div>
 
         {/* Column 2: Up Next (Tasks) */}
-        <div className="bg-dark-card rounded-xl border border-slate-700/50 p-4 flex flex-col">
-             <div className="flex items-center justify-between mb-3">
-                <h2 className="text-base font-bold text-white flex items-center gap-2">
+        <div className="bg-dark-card rounded-xl border border-slate-700/50 p-3 flex flex-col">
+             <div className="flex items-center justify-between mb-2">
+                <h2 className="text-sm font-bold text-white flex items-center gap-2">
                     <CheckCircle2 className="w-4 h-4 text-orbit-400" />
                     Up Next
                 </h2>
                 <Link to="/reminders" className="text-[10px] text-slate-400 hover:text-white flex items-center gap-1 transition-colors">View All <ArrowRight className="w-3 h-3"/></Link>
              </div>
              
-             <div className="space-y-2 flex-1">
+             <div className="space-y-1 flex-1">
                 {upcomingTasks.length === 0 ? (
                     <div className="h-full flex flex-col items-center justify-center py-6 text-slate-500 border border-dashed border-slate-800 rounded-lg">
                         <CheckCircle2 className="w-6 h-6 mb-1 opacity-50" />
@@ -282,7 +331,7 @@ export const Dashboard: React.FC = () => {
                                     onClick={(e) => handleTaskToggle(t.id, e)}
                                     className="text-slate-500 hover:text-green-500 transition-colors shrink-0"
                                 >
-                                    <CircleIcon className="w-4 h-4" />
+                                    <CircleIcon className="w-3.5 h-3.5" />
                                 </button>
                                 <div className="flex flex-col overflow-hidden">
                                     <Link to="/reminders" className="truncate hover:text-orbit-400 transition-colors font-medium block text-xs">
@@ -320,7 +369,7 @@ export const Dashboard: React.FC = () => {
           {/* Birthdays (Span 2 on Desktop) */}
           <div className="md:col-span-2">
             {upcomingBirthdays.length > 0 ? (
-                <div className="bg-gradient-to-r from-pink-500/10 to-purple-500/10 border border-pink-500/20 rounded-xl p-4 flex flex-col sm:flex-row items-center gap-4 h-full">
+                <div className="bg-gradient-to-r from-pink-500/10 to-purple-500/10 border border-pink-500/20 rounded-xl p-3 flex flex-col sm:flex-row items-center gap-4 h-full">
                     <div className="p-2 bg-pink-500/20 rounded-lg text-pink-400 shrink-0">
                         <Gift className="w-4 h-4" />
                     </div>
@@ -344,7 +393,7 @@ export const Dashboard: React.FC = () => {
                     </div>
                 </div>
             ) : (
-                <div className="bg-dark-card p-4 rounded-xl border border-slate-700/50 h-full flex items-center gap-3">
+                <div className="bg-dark-card p-3 rounded-xl border border-slate-700/50 h-full flex items-center gap-3">
                     <div className="p-2 bg-slate-800 rounded-lg text-slate-500">
                         <Gift className="w-4 h-4" />
                     </div>
@@ -356,7 +405,7 @@ export const Dashboard: React.FC = () => {
           </div>
 
           {/* Simple Stats Card */}
-          <div className="bg-dark-card p-4 rounded-xl border border-slate-700/50 flex flex-col justify-center">
+          <div className="bg-dark-card p-3 rounded-xl border border-slate-700/50 flex flex-col justify-center">
              <div className="flex justify-between items-end mb-2">
                 <p className="text-slate-400 text-[10px] font-medium uppercase tracking-wider">Health</p>
                 <div className="flex items-baseline gap-1">
@@ -374,23 +423,29 @@ export const Dashboard: React.FC = () => {
 
       {/* INSIGHTS DECK (Tabbed View) */}
       <div className="bg-dark-card rounded-xl border border-slate-700/50 overflow-hidden">
-            <div className="flex border-b border-slate-700">
+            <div className="flex border-b border-slate-700 overflow-x-auto no-scrollbar">
                 <button 
                     onClick={() => setInsightTab('activity')} 
-                    className={`flex-1 py-3 text-xs font-medium flex items-center justify-center gap-2 transition-colors ${insightTab === 'activity' ? 'bg-slate-800/50 text-white border-b-2 border-orbit-500' : 'text-slate-400 hover:bg-slate-800/30 hover:text-slate-200'}`}
+                    className={`flex-1 py-3 text-xs font-medium flex items-center justify-center gap-2 transition-colors min-w-[120px] ${insightTab === 'activity' ? 'bg-slate-800/50 text-white border-b-2 border-orbit-500' : 'text-slate-400 hover:bg-slate-800/30 hover:text-slate-200'}`}
                 >
                     <Clock className="w-3.5 h-3.5" /> Recent Activity
                 </button>
                 <button 
                     onClick={() => setInsightTab('distribution')} 
-                    className={`flex-1 py-3 text-xs font-medium flex items-center justify-center gap-2 transition-colors ${insightTab === 'distribution' ? 'bg-slate-800/50 text-white border-b-2 border-orbit-500' : 'text-slate-400 hover:bg-slate-800/30 hover:text-slate-200'}`}
+                    className={`flex-1 py-3 text-xs font-medium flex items-center justify-center gap-2 transition-colors min-w-[120px] ${insightTab === 'distribution' ? 'bg-slate-800/50 text-white border-b-2 border-orbit-500' : 'text-slate-400 hover:bg-slate-800/30 hover:text-slate-200'}`}
                 >
                     <BarChart3 className="w-3.5 h-3.5" /> Network Overview
+                </button>
+                <button 
+                    onClick={() => setInsightTab('memories')} 
+                    className={`flex-1 py-3 text-xs font-medium flex items-center justify-center gap-2 transition-colors min-w-[120px] ${insightTab === 'memories' ? 'bg-slate-800/50 text-white border-b-2 border-orbit-500' : 'text-slate-400 hover:bg-slate-800/30 hover:text-slate-200'}`}
+                >
+                    <History className="w-3.5 h-3.5" /> Memory Lane
                 </button>
             </div>
             
             <div className="p-4 min-h-[250px]">
-                {insightTab === 'activity' ? (
+                {insightTab === 'activity' && (
                     <div className="animate-fade-in">
                         <div className="space-y-0">
                             {globalFeed.length === 0 ? (
@@ -423,7 +478,9 @@ export const Dashboard: React.FC = () => {
                             )}
                         </div>
                     </div>
-                ) : (
+                )}
+
+                {insightTab === 'distribution' && (
                     <div className="animate-fade-in h-full flex flex-col md:flex-row items-center justify-center gap-8">
                         <div className="h-48 w-full md:w-1/2">
                             <ResponsiveContainer width="100%" height="100%">
@@ -460,6 +517,45 @@ export const Dashboard: React.FC = () => {
                             ))}
                         </div>
                     </div>
+                )}
+
+                {insightTab === 'memories' && (
+                     <div className="animate-fade-in">
+                        {memories.length === 0 ? (
+                            <div className="flex flex-col items-center justify-center py-8 text-slate-500">
+                                <History className="w-8 h-8 mb-2 opacity-40" />
+                                <p className="text-sm font-medium">No memories today.</p>
+                                <p className="text-xs mt-1">Check back tomorrow to see interactions from previous years.</p>
+                            </div>
+                        ) : (
+                            <div className="grid gap-3">
+                                {memories.map((item, idx) => (
+                                    <div key={`${item.id}-mem-${idx}`} onClick={() => navigate(`/person/${item.personId}`)} className="bg-gradient-to-r from-slate-800 to-slate-800/50 p-3 rounded-lg border border-slate-700/50 hover:border-orbit-500/30 transition-all cursor-pointer group">
+                                        <div className="flex items-start gap-3">
+                                            <img src={item.personAvatar || `https://ui-avatars.com/api/?name=${item.personName}`} className="w-10 h-10 rounded-full border-2 border-slate-700" alt="" />
+                                            <div className="flex-1">
+                                                <div className="flex justify-between items-start">
+                                                    <h4 className="text-sm font-bold text-white flex items-center gap-2">
+                                                        {item.personName}
+                                                        <span className="bg-purple-500/20 text-purple-300 text-[10px] px-1.5 py-0.5 rounded-full font-medium">
+                                                            {item.yearsAgo} Year{item.yearsAgo > 1 ? 's' : ''} Ago
+                                                        </span>
+                                                    </h4>
+                                                    <span className="text-[10px] text-slate-500">{new Date(item.date).toLocaleDateString()}</span>
+                                                </div>
+                                                <p className="text-xs text-slate-300 mt-1 line-clamp-2 italic">"{item.notes}"</p>
+                                                <div className="mt-2 flex gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                                                    <button className="text-[10px] bg-white text-slate-900 px-2 py-1 rounded font-medium">
+                                                        Send: "Thinking of you..."
+                                                    </button>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                ))}
+                            </div>
+                        )}
+                     </div>
                 )}
             </div>
       </div>

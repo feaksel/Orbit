@@ -1,3 +1,4 @@
+
 export enum HealthStatus {
   HEALTHY = 'HEALTHY',
   NEEDS_ATTENTION = 'NEEDS_ATTENTION',
@@ -60,6 +61,7 @@ export interface Person {
   isFavorite?: boolean;
   socialLinks?: SocialLink[];
   attachments?: Attachment[];
+  snoozeUntil?: string; // ISO Date string - hides from Needs Attention until this date
 }
 
 export interface Task {
