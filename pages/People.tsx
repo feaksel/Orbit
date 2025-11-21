@@ -1,5 +1,6 @@
+
 import React, { useState, useEffect } from 'react';
-import { getPeople, getCircles, addInteraction } from '../services/storageService';
+import { getPeople, getCircles, addInteraction, DATA_UPDATE_EVENT } from '../services/storageService';
 import { Person, Circle, InteractionType } from '../types';
 import { PersonCard } from '../components/PersonCard';
 import { calculateHealthScore } from '../components/HealthBadge';
@@ -28,11 +29,19 @@ export const People: React.FC = () => {
 
   useEffect(() => {
     refreshData();
+    
+    const handleDataUpdate = () => refreshData();
+    window.addEventListener(DATA_UPDATE_EVENT, handleDataUpdate);
+
     const handleOpenAddPerson = () => {
         setIsAddPersonOpen(true);
     };
     window.addEventListener('open-add-person', handleOpenAddPerson);
-    return () => window.removeEventListener('open-add-person', handleOpenAddPerson);
+    
+    return () => {
+        window.removeEventListener(DATA_UPDATE_EVENT, handleDataUpdate);
+        window.removeEventListener('open-add-person', handleOpenAddPerson);
+    };
   }, []);
 
   const handleQuickLog = (personId: string, e: React.MouseEvent) => {

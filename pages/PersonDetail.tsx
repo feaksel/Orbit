@@ -1,7 +1,7 @@
 
 import React, { useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { getPersonById, getCircles, addInteraction, updatePerson, updateInteraction, deleteInteraction } from '../services/storageService';
+import { getPersonById, getCircles, addInteraction, updatePerson, updateInteraction, deleteInteraction, DATA_UPDATE_EVENT } from '../services/storageService';
 import { Person, Circle, InteractionType, Interaction, Attachment } from '../types';
 import { HealthBadge, calculateHealthScore } from '../components/HealthBadge';
 import { ArrowLeft, Mail, Phone, MapPin, Calendar, Plus, MessageSquare, Edit2, Save, X, Star, Globe, Trash2, Link as LinkIcon, AlignLeft, Paperclip, FileText, Camera, Check, Tag, Clock } from 'lucide-react';
@@ -64,6 +64,11 @@ export const PersonDetail: React.FC = () => {
 
   useEffect(() => {
     refreshData();
+    
+    const handleDataUpdate = () => refreshData();
+    window.addEventListener(DATA_UPDATE_EVENT, handleDataUpdate);
+    
+    return () => window.removeEventListener(DATA_UPDATE_EVENT, handleDataUpdate);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [id]);
 

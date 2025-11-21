@@ -1,6 +1,7 @@
+
 import React, { useEffect, useState } from 'react';
 import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip, BarChart, Bar, XAxis, YAxis, CartesianGrid } from 'recharts';
-import { getPeople, getCircles, addInteraction, getTasks, toggleTaskCompletion } from '../services/storageService';
+import { getPeople, getCircles, addInteraction, getTasks, toggleTaskCompletion, DATA_UPDATE_EVENT } from '../services/storageService';
 import { Person, Circle, InteractionType, Task } from '../types';
 import { PersonCard } from '../components/PersonCard';
 import { MagicInput } from '../components/MagicInput';
@@ -29,6 +30,11 @@ export const Dashboard: React.FC = () => {
 
   useEffect(() => {
     refreshData();
+    
+    // Listen for sync updates from server or other tabs
+    const handleDataUpdate = () => refreshData();
+    window.addEventListener(DATA_UPDATE_EVENT, handleDataUpdate);
+
     const handleOpenGroupLog = () => {
         setModalPersonId(undefined);
         setIsModalOpen(true);
@@ -40,6 +46,7 @@ export const Dashboard: React.FC = () => {
     window.addEventListener('open-add-person', handleOpenAddPerson);
     
     return () => {
+        window.removeEventListener(DATA_UPDATE_EVENT, handleDataUpdate);
         window.removeEventListener('open-group-log', handleOpenGroupLog);
         window.removeEventListener('open-add-person', handleOpenAddPerson);
     };

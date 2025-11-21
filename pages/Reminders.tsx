@@ -1,5 +1,6 @@
+
 import React, { useState, useEffect } from 'react';
-import { getTasks, saveTask, toggleTaskCompletion, deleteTask, getPeople, generateId } from '../services/storageService';
+import { getTasks, saveTask, toggleTaskCompletion, deleteTask, getPeople, generateId, DATA_UPDATE_EVENT } from '../services/storageService';
 import { Task, Person } from '../types';
 import { CheckCircle2, Circle as CircleIcon, Plus, Trash2, Calendar, Repeat, Tag, Users, List, ClipboardList, Archive, Undo2, ChevronLeft, ChevronRight, ArrowRightCircle, Inbox } from 'lucide-react';
 
@@ -33,6 +34,9 @@ export const Reminders: React.FC = () => {
 
   useEffect(() => {
       refresh();
+      const handleDataUpdate = () => refresh();
+      window.addEventListener(DATA_UPDATE_EVENT, handleDataUpdate);
+      return () => window.removeEventListener(DATA_UPDATE_EVENT, handleDataUpdate);
   }, []);
 
   const handleSaveTask = () => {

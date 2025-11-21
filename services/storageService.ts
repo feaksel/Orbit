@@ -6,6 +6,8 @@ const STORAGE_KEY_CIRCLES = 'orbit_circles_v1';
 const STORAGE_KEY_TASKS = 'orbit_tasks_v1';
 const SERVER_API_URL = '/api/data';
 
+export const DATA_UPDATE_EVENT = 'orbit-data-update';
+
 // Helper for Robust IDs
 export const generateId = (): string => {
     if (typeof crypto !== 'undefined' && crypto.randomUUID) {
@@ -53,15 +55,17 @@ const triggerServerSync = () => {
 
 export const initializeFromServer = async (): Promise<boolean> => {
     try {
-        const response = await fetch(SERVER_API_URL);
+        const response = await fetch(SERVER_API_URL, {
+            cache: 'no-store',
+            headers: { 'Cache-Control': 'no-cache' }
+        });
         if (!response.ok) return false;
         
         const data = await response.json();
         if (!data) return false;
 
-        // Merge logic: For now, Server wins if data exists
-        // ideally we would check metadata.lastUpdated
-        
+        // Merge logic: Server wins if data exists
+        // Only overwrite if we actually got people array
         if (data.people && Array.isArray(data.people)) {
             localStorage.setItem(STORAGE_KEY_PEOPLE, JSON.stringify(data.people));
         }
@@ -73,7 +77,7 @@ export const initializeFromServer = async (): Promise<boolean> => {
         }
         
         // Notify app to refresh
-        window.dispatchEvent(new Event('orbit-data-update'));
+        window.dispatchEvent(new Event(DATA_UPDATE_EVENT));
         return true;
     } catch (e) {
         console.log("Could not initialize from server (Offline or First Run)");
@@ -393,6 +397,7 @@ export const exportData = (): string => {
       if (data.tasks) localStorage.setItem(STORAGE_KEY_TASKS, JSON.stringify(data.tasks));
       
       triggerServerSync();
+      window.dispatchEvent(new Event(DATA_UPDATE_EVENT));
       return { success: true, message: `Successfully restored ${data.people.length} contacts.` };
     } catch (e: any) {
       console.error("Import failed", e);
@@ -409,4 +414,5 @@ export const exportData = (): string => {
       localStorage.setItem(STORAGE_KEY_CIRCLES, JSON.stringify(DEFAULT_CIRCLES));
       localStorage.setItem(STORAGE_KEY_TASKS, JSON.stringify(DEFAULT_TASKS));
       triggerServerSync();
+      window.dispatchEvent(new Event(DATA_UPDATE_EVENT));
   };
