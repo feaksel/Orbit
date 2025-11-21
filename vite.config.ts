@@ -12,6 +12,15 @@ export default defineConfig(({ mode }) => {
     define: {
       'process.env.API_KEY': JSON.stringify(env.VITE_API_KEY),
     },
+    server: {
+      proxy: {
+        '/api': {
+          target: 'http://localhost:3001',
+          changeOrigin: true,
+          secure: false,
+        }
+      }
+    },
     build: {
       target: 'esnext',
       outDir: 'dist',

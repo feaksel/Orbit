@@ -1,16 +1,27 @@
-import React from 'react';
+import React, { useEffect } from 'react';
 import { HashRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { Sidebar, MobileHeader, MobileBottomNav } from './components/Sidebar';
 import { Dashboard } from './pages/Dashboard';
 import { People } from './pages/People';
 import { PersonDetail } from './pages/PersonDetail';
 import { Reminders } from './pages/Reminders';
+import { Settings } from './pages/Settings';
+import { initializeFromServer } from './services/storageService';
 
 const App: React.FC = () => {
   // Helper to trigger group log from bottom nav
   const triggerGroupLog = () => {
     window.dispatchEvent(new Event('open-group-log'));
   };
+
+  useEffect(() => {
+    // Attempt to fetch persisted data from the local server on startup
+    initializeFromServer().then(success => {
+        if(success) {
+            console.log("Successfully initialized data from server.");
+        }
+    });
+  }, []);
 
   return (
     <HashRouter>
@@ -26,6 +37,7 @@ const App: React.FC = () => {
                     <Route path="/people" element={<People />} />
                     <Route path="/person/:id" element={<PersonDetail />} />
                     <Route path="/reminders" element={<Reminders />} />
+                    <Route path="/settings" element={<Settings />} />
                     <Route path="*" element={<Navigate to="/" replace />} />
                 </Routes>
             </main>

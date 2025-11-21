@@ -1,6 +1,6 @@
 import React from 'react';
 import { NavLink, useLocation } from 'react-router-dom';
-import { LayoutDashboard, Users, PlusCircle, Search, Menu, CalendarCheck } from 'lucide-react';
+import { LayoutDashboard, Users, PlusCircle, Search, Menu, CalendarCheck, Settings } from 'lucide-react';
 
 export const Sidebar: React.FC = () => {
   const linkClass = ({ isActive }: { isActive: boolean }) => 
@@ -32,12 +32,12 @@ export const Sidebar: React.FC = () => {
         </NavLink>
         
         <div className="px-4 py-2 mt-4 mb-2 text-xs font-semibold text-slate-500 uppercase tracking-wider">
-            Tools
+            System
         </div>
-        <span className="flex items-center gap-3 px-4 py-3 rounded-xl text-slate-600 cursor-not-allowed">
-          <Search className="w-5 h-5" />
-          Advanced Search
-        </span>
+        <NavLink to="/settings" className={linkClass}>
+          <Settings className="w-5 h-5" />
+          Settings & Data
+        </NavLink>
       </nav>
 
       <div className="px-4 py-4 border-t border-slate-800">
@@ -97,10 +97,10 @@ export const MobileBottomNav: React.FC<MobileBottomNavProps> = ({ onOpenGroupLog
            <span className="text-[10px] mt-1">Tasks</span>
         </NavLink>
 
-        <div className="flex flex-col items-center justify-center w-full h-full text-slate-600 cursor-not-allowed">
-           <Menu className="w-6 h-6" />
-           <span className="text-[10px] mt-1">Menu</span>
-        </div>
+        <NavLink to="/settings" className={`flex flex-col items-center justify-center w-full h-full ${isActive('/settings') ? 'text-orbit-500' : 'text-slate-600'}`}>
+           <Settings className="w-6 h-6" />
+           <span className="text-[10px] mt-1">Settings</span>
+        </NavLink>
       </div>
     </div>
   );
