@@ -1,3 +1,4 @@
+
 import React, { useEffect } from 'react';
 import { HashRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { Sidebar, MobileHeader, MobileBottomNav } from './components/Sidebar';
@@ -6,7 +7,7 @@ import { People } from './pages/People';
 import { PersonDetail } from './pages/PersonDetail';
 import { Reminders } from './pages/Reminders';
 import { Settings } from './pages/Settings';
-import { initializeFromServer } from './services/storageService';
+import { startAutoSync } from './services/storageService';
 
 const App: React.FC = () => {
   // Helper to trigger group log from bottom nav
@@ -15,12 +16,8 @@ const App: React.FC = () => {
   };
 
   useEffect(() => {
-    // Attempt to fetch persisted data from the local server on startup
-    initializeFromServer().then(success => {
-        if(success) {
-            console.log("Successfully initialized data from server.");
-        }
-    });
+    // Start auto-sync polling loop
+    startAutoSync();
   }, []);
 
   return (

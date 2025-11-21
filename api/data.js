@@ -16,6 +16,7 @@ async function kvCommand(command, args) {
         headers: {
             Authorization: `Bearer ${token}`,
         },
+        cache: 'no-store' // Force fresh fetch from KV
     });
 
     if (!response.ok) {
@@ -66,7 +67,8 @@ export default async function handler(req, res) {
                         Authorization: `Bearer ${process.env.KV_REST_API_TOKEN}`,
                         'Content-Type': 'application/json'
                     },
-                    body: JSON.stringify(req.body)
+                    body: JSON.stringify(req.body),
+                    cache: 'no-store'
                 });
                 return res.status(200).json({ success: true, source: 'cloud' });
             }

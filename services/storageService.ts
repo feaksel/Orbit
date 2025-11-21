@@ -19,9 +19,28 @@ export const generateId = (): string => {
 // --- Server Sync Logic ---
 let syncTimeout: any = null;
 let isSyncing = false;
+let isDirty = false; // Flag to track if we have unsaved local changes
+let syncInterval: any = null;
+
+export const startAutoSync = () => {
+    // Run immediately on load
+    initializeFromServer();
+    
+    if (syncInterval) clearInterval(syncInterval);
+    
+    // Poll every 5 seconds to keep clients in sync
+    syncInterval = setInterval(() => {
+        // Only sync if tab is visible to save bandwidth
+        if (document.visibilityState === 'visible') {
+            initializeFromServer();
+        }
+    }, 5000);
+};
 
 // Saves current local state to the server (Debounced)
 const triggerServerSync = () => {
+    isDirty = true; // Mark as dirty immediately so we don't overwrite with incoming server data while typing
+    
     if (syncTimeout) clearTimeout(syncTimeout);
     syncTimeout = setTimeout(async () => {
         if (isSyncing) return; // Prevent overlap
@@ -43,10 +62,12 @@ const triggerServerSync = () => {
             
             if (res.ok) {
                 console.log('Synced to server/cloud');
+                isDirty = false; // Sync complete, safe to pull again
             }
         } catch (e) {
             // Silent fail - offline mode
             console.debug('Sync skipped (Offline)');
+            // Keep isDirty true so we retry later or don't overwrite
         } finally {
             isSyncing = false;
         }
@@ -54,33 +75,55 @@ const triggerServerSync = () => {
 };
 
 export const initializeFromServer = async (): Promise<boolean> => {
+    // CRITICAL: If we have unsaved local changes (user is typing), do NOT pull from server
+    // This prevents the "ghost typing" issue where server data overwrites local work
+    if (isDirty) return false;
+
     try {
-        const response = await fetch(SERVER_API_URL, {
+        // Add timestamp to force bypass browser cache and Vercel edge cache
+        const uniqueUrl = `${SERVER_API_URL}?t=${Date.now()}`;
+        
+        const response = await fetch(uniqueUrl, {
+            method: 'GET',
             cache: 'no-store',
-            headers: { 'Cache-Control': 'no-cache' }
+            headers: { 
+                'Cache-Control': 'no-cache, no-store, must-revalidate',
+                'Pragma': 'no-cache',
+                'Expires': '0'
+            }
         });
         if (!response.ok) return false;
         
         const data = await response.json();
         if (!data) return false;
 
+        let hasChanges = false;
+
+        // Helper to update local storage only if data changed
+        const updateIfChanged = (key: string, newData: any) => {
+            if (!newData || !Array.isArray(newData)) return;
+            
+            const currentStr = localStorage.getItem(key);
+            const newStr = JSON.stringify(newData);
+            
+            if (currentStr !== newStr) {
+                localStorage.setItem(key, newStr);
+                hasChanges = true;
+            }
+        };
+
         // Merge logic: Server wins if data exists
-        // Only overwrite if we actually got people array
-        if (data.people && Array.isArray(data.people)) {
-            localStorage.setItem(STORAGE_KEY_PEOPLE, JSON.stringify(data.people));
-        }
-        if (data.circles && Array.isArray(data.circles)) {
-            localStorage.setItem(STORAGE_KEY_CIRCLES, JSON.stringify(data.circles));
-        }
-        if (data.tasks && Array.isArray(data.tasks)) {
-            localStorage.setItem(STORAGE_KEY_TASKS, JSON.stringify(data.tasks));
-        }
+        updateIfChanged(STORAGE_KEY_PEOPLE, data.people);
+        updateIfChanged(STORAGE_KEY_CIRCLES, data.circles);
+        updateIfChanged(STORAGE_KEY_TASKS, data.tasks);
         
-        // Notify app to refresh
-        window.dispatchEvent(new Event(DATA_UPDATE_EVENT));
+        // Notify app to refresh only if we actually updated something (reduces flicker)
+        if (hasChanges) {
+            window.dispatchEvent(new Event(DATA_UPDATE_EVENT));
+        }
         return true;
     } catch (e) {
-        console.log("Could not initialize from server (Offline or First Run)");
+        // console.log("Could not initialize from server (Offline or First Run)");
         return false;
     }
 };
