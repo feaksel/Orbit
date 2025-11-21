@@ -112,19 +112,19 @@ export const MagicInput: React.FC<MagicInputProps> = ({ onUpdate }) => {
   };
 
   return (
-    <div className="w-full max-w-3xl mx-auto mb-8 relative z-20">
+    <div className="w-full relative z-20">
       <form onSubmit={handleParse} className="relative group">
-        <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
+        <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
           {isProcessing ? (
-             <Loader2 className="h-5 w-5 text-orbit-500 animate-spin" />
+             <Loader2 className="h-4 w-4 text-orbit-500 animate-spin" />
           ) : (
-             <Sparkles className="h-5 w-5 text-orbit-500 group-focus-within:text-orbit-400 transition-colors" />
+             <Sparkles className="h-4 w-4 text-orbit-500 group-focus-within:text-orbit-400 transition-colors" />
           )}
         </div>
         <input
           type="text"
-          className="block w-full pl-12 pr-12 py-4 bg-dark-card border border-slate-700 rounded-2xl text-slate-100 placeholder-slate-400 focus:ring-2 focus:ring-orbit-500 focus:border-transparent outline-none shadow-lg transition-all"
-          placeholder="Tell Orbit: 'Had coffee with Sarah yesterday'..."
+          className="block w-full pl-9 pr-10 py-2.5 bg-dark-card border border-slate-700 rounded-xl text-sm text-slate-100 placeholder-slate-500 focus:ring-1 focus:ring-orbit-500 focus:border-orbit-500/50 outline-none shadow-sm transition-all"
+          placeholder="Tell Orbit: 'Lunch with Sarah yesterday'..."
           value={input}
           onChange={(e) => setInput(e.target.value)}
           disabled={isProcessing || !!pendingAction}
@@ -133,9 +133,9 @@ export const MagicInput: React.FC<MagicInputProps> = ({ onUpdate }) => {
         <button 
             type="submit"
             disabled={!input || isProcessing || !!pendingAction}
-            className="absolute inset-y-2 right-2 px-3 flex items-center bg-orbit-600 hover:bg-orbit-500 text-white rounded-xl disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+            className="absolute inset-y-1 right-1 px-2 flex items-center bg-slate-800 hover:bg-orbit-600 text-slate-400 hover:text-white rounded-lg disabled:opacity-0 disabled:cursor-not-allowed transition-all"
         >
-            <ArrowRight className="h-5 w-5" />
+            <ArrowRight className="h-4 w-4" />
         </button>
       </form>
 
@@ -155,7 +155,7 @@ export const MagicInput: React.FC<MagicInputProps> = ({ onUpdate }) => {
                       <button 
                         key={i}
                         onClick={() => { setInput(tip); setShowHelp(false); }}
-                        className="text-left text-sm text-slate-300 hover:text-white hover:bg-slate-800 p-2 rounded transition-colors"
+                        className="text-left text-xs text-slate-300 hover:text-white hover:bg-slate-800 p-2 rounded transition-colors"
                       >
                           "{tip}"
                       </button>
@@ -166,67 +166,61 @@ export const MagicInput: React.FC<MagicInputProps> = ({ onUpdate }) => {
 
       {/* Confirmation Card */}
       {pendingAction && (
-        <div className="mt-4 bg-dark-card border border-orbit-500/50 rounded-xl p-4 shadow-2xl animate-fade-in relative">
-          <div className="absolute -top-2 left-8 w-4 h-4 bg-dark-card border-t border-l border-orbit-500/50 transform rotate-45"></div>
-          <h3 className="text-sm font-bold text-white mb-3 flex items-center gap-2">
-            <Sparkles className="w-4 h-4 text-orbit-400" />
+        <div className="mt-2 bg-dark-card border border-orbit-500/50 rounded-xl p-3 shadow-2xl animate-fade-in relative">
+          <h3 className="text-xs font-bold text-white mb-2 flex items-center gap-2">
+            <Sparkles className="w-3 h-3 text-orbit-400" />
             Review Log
           </h3>
           
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
-            <div className="bg-slate-800/50 p-3 rounded-lg">
-                <label className="text-xs text-slate-400 mb-1 block">People</label>
+          <div className="grid grid-cols-1 gap-2 mb-2">
+            <div className="bg-slate-800/50 p-2 rounded-lg flex justify-between items-center">
                 <div className="flex items-center gap-2 text-sm text-white">
-                    <Users className="w-4 h-4 text-orbit-400" />
+                    <Users className="w-3 h-3 text-orbit-400" />
                     {pendingAction.names.length > 0 ? pendingAction.names.join(", ") : <span className="text-red-400 italic">No names found</span>}
                 </div>
-            </div>
-            <div className="bg-slate-800/50 p-3 rounded-lg">
-                <label className="text-xs text-slate-400 mb-1 block">Date</label>
                 <div className="flex items-center gap-2 text-sm text-white">
-                    <Calendar className="w-4 h-4 text-orbit-400" />
+                    <Calendar className="w-3 h-3 text-orbit-400" />
                     <input 
                         type="date" 
                         value={pendingAction.date}
                         onChange={(e) => setPendingAction({...pendingAction, date: e.target.value})}
-                        className="bg-transparent outline-none w-full"
+                        className="bg-transparent outline-none text-right w-24 text-xs"
                     />
                 </div>
             </div>
-            <div className="bg-slate-800/50 p-3 rounded-lg col-span-1 md:col-span-2">
-                <label className="text-xs text-slate-400 mb-1 block">Summary (editable)</label>
+            <div className="bg-slate-800/50 p-2 rounded-lg">
                 <div className="flex items-start gap-2 text-sm text-white">
-                    <MessageSquare className="w-4 h-4 text-orbit-400 mt-1" />
+                    <MessageSquare className="w-3 h-3 text-orbit-400 mt-1" />
                     <textarea
                         value={pendingAction.summary}
                         onChange={(e) => setPendingAction({...pendingAction, summary: e.target.value})}
-                        className="bg-transparent w-full outline-none resize-none h-auto"
+                        className="bg-transparent w-full outline-none resize-none h-auto text-xs"
                         rows={2}
                     />
                 </div>
             </div>
           </div>
 
-          <div className="flex justify-end gap-3">
+          <div className="flex justify-end gap-2">
             <button 
                 onClick={handleCancel}
-                className="px-4 py-2 text-slate-400 hover:text-white text-sm font-medium transition-colors"
+                className="px-3 py-1 text-slate-400 hover:text-white text-xs font-medium transition-colors"
             >
                 Cancel
             </button>
             <button 
                 onClick={handleConfirm}
-                className="px-4 py-2 bg-orbit-600 hover:bg-orbit-500 text-white rounded-lg text-sm font-medium flex items-center gap-2 shadow-lg shadow-orbit-600/20 transition-colors"
+                className="px-3 py-1 bg-orbit-600 hover:bg-orbit-500 text-white rounded-lg text-xs font-medium flex items-center gap-1 shadow-lg shadow-orbit-600/20 transition-colors"
             >
-                <Check className="w-4 h-4" />
-                Confirm & Save
+                <Check className="w-3 h-3" />
+                Confirm
             </button>
           </div>
         </div>
       )}
       
       {feedback && (
-        <div className={`mt-2 text-sm text-center animate-fade-in ${feedback.includes('Sorry') ? 'text-red-400' : 'text-green-400'}`}>
+        <div className={`absolute top-full mt-1 w-full text-xs text-center animate-fade-in bg-dark-card border border-slate-700 rounded p-1 shadow-lg z-50 ${feedback.includes('Sorry') ? 'text-red-400' : 'text-green-400'}`}>
           {feedback}
         </div>
       )}

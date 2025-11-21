@@ -4,9 +4,10 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { getPersonById, getCircles, addInteraction, updatePerson, updateInteraction, deleteInteraction, deletePerson, DATA_UPDATE_EVENT, getTasks } from '../services/storageService';
 import { Person, Circle, InteractionType, Interaction, Attachment, Task } from '../types';
 import { HealthBadge, calculateHealthScore } from '../components/HealthBadge';
-import { ArrowLeft, Mail, Phone, MapPin, Calendar, Plus, MessageSquare, Edit2, Save, X, Star, Globe, Trash2, Link as LinkIcon, AlignLeft, Paperclip, FileText, Camera, Check, Tag, Clock, AlertTriangle, Briefcase, CheckCircle2 } from 'lucide-react';
+import { ArrowLeft, Mail, Phone, MapPin, Calendar, Plus, MessageSquare, Edit2, Save, X, Star, Globe, Trash2, Link as LinkIcon, AlignLeft, Paperclip, FileText, Camera, Check, Tag, Clock, AlertTriangle, Briefcase, CheckCircle2, ExternalLink } from 'lucide-react';
 import { InteractionModal } from '../components/InteractionModal';
 import { timeAgo, formatDateReadable } from '../utils/dateUtils';
+import { generateGoogleCalendarUrl } from '../utils/calendarUtils';
 
 export const PersonDetail: React.FC = () => {
   const { id } = useParams<{ id: string }>();
@@ -222,6 +223,13 @@ export const PersonDetail: React.FC = () => {
           });
           refreshData();
       }
+  };
+  
+  const openGoogleCalendar = (e: React.MouseEvent, task: Task) => {
+    e.stopPropagation();
+    if (!person) return;
+    const url = generateGoogleCalendarUrl(task, [person]);
+    window.open(url, '_blank');
   };
 
   const getAge = (birthdayStr?: string) => {
@@ -579,7 +587,7 @@ export const PersonDetail: React.FC = () => {
                     </h2>
                     <div className="grid gap-3">
                         {linkedTasks.map(task => (
-                            <div key={task.id} onClick={() => navigate('/reminders')} className="bg-dark-card p-3 rounded-xl border border-slate-700/50 flex items-center justify-between cursor-pointer hover:border-orbit-500/50 transition-all">
+                            <div key={task.id} onClick={() => navigate('/reminders')} className="group bg-dark-card p-3 rounded-xl border border-slate-700/50 flex items-center justify-between cursor-pointer hover:border-orbit-500/50 transition-all">
                                 <div className="flex flex-col">
                                     <span className="text-white font-medium">{task.title}</span>
                                     <span className="text-xs text-slate-400 flex items-center gap-1 mt-1">
@@ -587,8 +595,19 @@ export const PersonDetail: React.FC = () => {
                                         {task.date ? formatDateReadable(task.date) : 'Unscheduled'}
                                     </span>
                                 </div>
-                                <div className="bg-slate-800 px-3 py-1 rounded text-xs text-slate-300">
-                                    {timeAgo(task.date)}
+                                <div className="flex items-center gap-2">
+                                    {task.date && (
+                                        <button 
+                                            onClick={(e) => openGoogleCalendar(e, task)}
+                                            className="text-slate-500 hover:text-white p-2 rounded-full hover:bg-slate-700 transition-colors"
+                                            title="Add to Google Calendar"
+                                        >
+                                            <ExternalLink className="w-4 h-4" />
+                                        </button>
+                                    )}
+                                    <div className="bg-slate-800 px-3 py-1 rounded text-xs text-slate-300">
+                                        {timeAgo(task.date)}
+                                    </div>
                                 </div>
                             </div>
                         ))}

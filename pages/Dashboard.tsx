@@ -1,6 +1,6 @@
 
 import React, { useEffect, useState } from 'react';
-import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip, BarChart, Bar, XAxis, YAxis, CartesianGrid } from 'recharts';
+import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip } from 'recharts';
 import { getPeople, getCircles, addInteraction, getTasks, toggleTaskCompletion, DATA_UPDATE_EVENT, SYNC_STATUS_EVENT, getSyncStatus, SyncStatus } from '../services/storageService';
 import { Person, Circle, InteractionType, Task } from '../types';
 import { PersonCard } from '../components/PersonCard';
@@ -8,14 +8,20 @@ import { MagicInput } from '../components/MagicInput';
 import { calculateHealthScore } from '../components/HealthBadge';
 import { InteractionModal } from '../components/InteractionModal';
 import { AddPersonModal } from '../components/AddPersonModal';
-import { Users, AlertTriangle, TrendingUp, Sparkles, Calendar, Gift, Plus, CheckCircle2, Circle as CircleIcon, Repeat, ArrowRight, Cloud, CloudOff, RefreshCw } from 'lucide-react';
-import { Link } from 'react-router-dom';
+import { Users, AlertTriangle, TrendingUp, Sparkles, Calendar, Gift, Plus, CheckCircle2, Circle as CircleIcon, Repeat, ArrowRight, Cloud, CloudOff, RefreshCw, MessageSquare, Clock, BarChart3, Layout } from 'lucide-react';
+import { Link, useNavigate } from 'react-router-dom';
+import { timeAgo, formatDateReadable } from '../utils/dateUtils';
+import { generateGoogleCalendarUrl } from '../utils/calendarUtils';
 
 export const Dashboard: React.FC = () => {
+  const navigate = useNavigate();
   const [people, setPeople] = useState<Person[]>([]);
   const [circles, setCircles] = useState<Circle[]>([]);
   const [tasks, setTasks] = useState<Task[]>([]);
   const [syncStatus, setSyncStatus] = useState<SyncStatus>(getSyncStatus());
+  
+  // View State
+  const [insightTab, setInsightTab] = useState<'activity' | 'distribution'>('activity');
   
   // Modal States
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -86,6 +92,14 @@ export const Dashboard: React.FC = () => {
       toggleTaskCompletion(taskId);
       refreshData();
   };
+  
+  const openGoogleCalendar = (e: React.MouseEvent, task: Task) => {
+    e.preventDefault();
+    e.stopPropagation();
+    const related = people.filter(p => task.linkedPersonIds?.includes(p.id));
+    const url = generateGoogleCalendarUrl(task, related);
+    window.open(url, '_blank');
+  };
 
   // Analytics
   const totalContacts = people.length;
@@ -98,7 +112,7 @@ export const Dashboard: React.FC = () => {
     color: c.color
   })).filter(d => d.value > 0);
 
-  // Birthday Logic (Next 7 Days for everyone, 14 days for Favorites for visibility)
+  // Birthday Logic
   const getUpcomingBirthdays = () => {
     const today = new Date();
     return people.filter(p => {
@@ -110,7 +124,6 @@ export const Dashboard: React.FC = () => {
         const diffTime = Math.abs(nextBday.getTime() - today.getTime());
         const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
         
-        // Logic: Remind 7 days before for Favorites, 1 day before for regular
         const threshold = p.isFavorite ? 7 : 1; 
         return diffDays <= threshold;
     }).map(p => {
@@ -125,7 +138,6 @@ export const Dashboard: React.FC = () => {
 
   const upcomingBirthdays = getUpcomingBirthdays();
   
-  // Filter tasks: Not completed, and sort by date.
   const upcomingTasks = tasks
     .filter(t => !t.isCompleted)
     .sort((a, b) => {
@@ -136,291 +148,320 @@ export const Dashboard: React.FC = () => {
     })
     .slice(0, 5); 
 
-  // Prepare Bar Chart Data
-  const getMonthlyInteractionCount = () => {
-    const counts: Record<string, number> = {};
-    const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
-    
-    const today = new Date();
-    for (let i = 5; i >= 0; i--) {
-        const d = new Date(today.getFullYear(), today.getMonth() - i, 1);
-        const key = months[d.getMonth()];
-        counts[key] = 0;
-    }
-
-    people.forEach(p => {
-        p.interactions.forEach(int => {
-            const d = new Date(int.date);
-            const key = months[d.getMonth()];
-            if (counts[key] !== undefined) {
-                counts[key]++;
-            }
-        });
-    });
-
-    return Object.entries(counts).map(([name, interactions]) => ({ name, interactions }));
+  // GLOBAL FEED GENERATOR
+  const getGlobalFeed = () => {
+      let allInteractions: any[] = [];
+      people.forEach(p => {
+          p.interactions.forEach(i => {
+              allInteractions.push({
+                  ...i,
+                  personName: p.name,
+                  personAvatar: p.avatar,
+                  personId: p.id,
+                  circleColor: circles.find(c => p.circles.includes(c.id))?.color || '#64748b'
+              });
+          });
+      });
+      // Sort by date desc
+      return allInteractions.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime()).slice(0, 8);
   };
-  
-  const barData = getMonthlyInteractionCount();
+  const globalFeed = getGlobalFeed();
 
   // Status Indicator Component
   const StatusIndicator = () => {
-    if (syncStatus === 'syncing') return <div className="flex items-center gap-1 text-xs text-orbit-400 bg-orbit-400/10 px-2 py-1 rounded-full"><RefreshCw className="w-3 h-3 animate-spin" /> Syncing...</div>;
-    if (syncStatus === 'saved') return <div className="flex items-center gap-1 text-xs text-green-400 bg-green-400/10 px-2 py-1 rounded-full"><Cloud className="w-3 h-3" /> Synced</div>;
-    if (syncStatus === 'error') return <div className="flex items-center gap-1 text-xs text-red-400 bg-red-400/10 px-2 py-1 rounded-full"><AlertTriangle className="w-3 h-3" /> Sync Error</div>;
-    if (syncStatus === 'offline') return <div className="flex items-center gap-1 text-xs text-slate-400 bg-slate-400/10 px-2 py-1 rounded-full"><CloudOff className="w-3 h-3" /> Offline</div>;
-    return <div className="flex items-center gap-1 text-xs text-slate-500 px-2 py-1"><Cloud className="w-3 h-3" /> Connected</div>;
+    if (syncStatus === 'syncing') return <div className="flex items-center gap-1 text-[10px] text-orbit-400 bg-orbit-400/10 px-1.5 py-0.5 rounded-full"><RefreshCw className="w-2.5 h-2.5 animate-spin" /> Syncing</div>;
+    if (syncStatus === 'saved') return <div className="flex items-center gap-1 text-[10px] text-green-400 bg-green-400/10 px-1.5 py-0.5 rounded-full"><Cloud className="w-2.5 h-2.5" /> Synced</div>;
+    if (syncStatus === 'error') return <div className="flex items-center gap-1 text-[10px] text-red-400 bg-red-400/10 px-1.5 py-0.5 rounded-full"><AlertTriangle className="w-2.5 h-2.5" /> Error</div>;
+    if (syncStatus === 'offline') return <div className="flex items-center gap-1 text-[10px] text-slate-400 bg-slate-400/10 px-1.5 py-0.5 rounded-full"><CloudOff className="w-2.5 h-2.5" /> Offline</div>;
+    return <div className="flex items-center gap-1 text-[10px] text-slate-500 px-1.5 py-0.5"><Cloud className="w-2.5 h-2.5" /> Connected</div>;
   };
 
   return (
-    <div className="p-6 max-w-7xl mx-auto space-y-8 animate-fade-in pb-24 md:pb-6">
-      {/* Header & Magic Input */}
-      <header className="text-center mb-8 relative">
-        <div className="flex justify-center items-center mb-2 relative">
-            <h1 className="text-4xl font-bold text-white">Welcome back</h1>
-            <button 
-                onClick={() => setIsAddPersonOpen(true)}
-                className="absolute right-0 md:hidden p-2 bg-orbit-600 rounded-full text-white shadow-lg"
-            >
-                <Plus className="w-5 h-5" />
-            </button>
-        </div>
-        <div className="flex justify-center mb-6">
-            <StatusIndicator />
-        </div>
-        
-        <MagicInput onUpdate={refreshData} />
-        
-        {/* Desktop Actions */}
-        <div className="hidden md:flex absolute top-0 right-0 gap-3">
-            <button 
-                onClick={() => setIsAddPersonOpen(true)}
-                className="flex items-center gap-2 px-4 py-2 bg-orbit-600 hover:bg-orbit-500 text-white rounded-xl transition-all hover:shadow-lg shadow-orbit-600/20"
-            >
-                <Plus className="w-4 h-4" />
-                <span>Add Connection</span>
-            </button>
-            <button 
-                onClick={handleGroupLogClick}
-                className="flex items-center gap-2 px-4 py-2 bg-slate-800 hover:bg-slate-700 text-white rounded-xl border border-slate-700 transition-all hover:shadow-lg"
-            >
-                <Users className="w-4 h-4 text-orbit-500" />
-                <span>Log Group Event</span>
-            </button>
+    <div className="p-4 max-w-7xl mx-auto space-y-4 animate-fade-in pb-24 md:pb-6">
+      {/* Header & Magic Input - Compact Version */}
+      <header className="mb-4 relative">
+        <div className="flex flex-col md:flex-row gap-3 md:items-center">
+            <div className="flex-1">
+                <MagicInput onUpdate={refreshData} />
+            </div>
+            
+            {/* Quick Action Buttons */}
+            <div className="flex items-center justify-between md:justify-end gap-3">
+                <StatusIndicator />
+                
+                <div className="flex gap-2">
+                    <button 
+                        onClick={() => setIsAddPersonOpen(true)}
+                        className="flex items-center gap-1.5 px-3 py-2 bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white rounded-lg text-xs font-medium border border-slate-700 transition-colors"
+                    >
+                        <Plus className="w-3.5 h-3.5" />
+                        <span>Add</span>
+                    </button>
+                    <button 
+                        onClick={handleGroupLogClick}
+                        className="flex items-center gap-1.5 px-3 py-2 bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white rounded-lg text-xs font-medium border border-slate-700 transition-colors"
+                    >
+                        <Users className="w-3.5 h-3.5" />
+                        <span>Log</span>
+                    </button>
+                </div>
+            </div>
         </div>
       </header>
 
-      {/* Mobile "Add Group Event" Banner */}
-      <div className="md:hidden mb-6">
-        <button 
-            onClick={handleGroupLogClick}
-            className="w-full flex items-center justify-center gap-2 py-3 bg-gradient-to-r from-orbit-600 to-purple-600 text-white rounded-xl shadow-lg font-medium"
-        >
-            <Sparkles className="w-5 h-5" />
-            Log Group Activity
-        </button>
-      </div>
-
-      {/* Priority List (MOVED TO TOP) */}
-      <div className="space-y-4">
-        <div className="flex items-center justify-between">
-            <h2 className="text-xl font-semibold text-white flex items-center gap-2">
-            <AlertTriangle className="w-5 h-5 text-yellow-500" />
-            Priority Actions
-            </h2>
-        </div>
+      {/* ACTION CENTER: Needs Attention & Tasks */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
         
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-            {overdueContacts.length === 0 ? (
-                <div className="col-span-full p-6 text-center bg-dark-card rounded-2xl border border-slate-700 border-dashed text-slate-400">
-                    <p>You're all caught up! Great job.</p>
-                </div>
-            ) : (
-                overdueContacts.slice(0, 4).map(p => (
-                <PersonCard 
-                    key={p.id} 
-                    person={p} 
-                    circles={circles} 
-                    onQuickLog={handleQuickLog} 
-                />
-                ))
-            )}
-        </div>
-      </div>
-
-      {/* Birthday Banner */}
-      {upcomingBirthdays.length > 0 && (
-          <div className="bg-gradient-to-r from-pink-500/10 to-purple-500/10 border border-pink-500/20 rounded-2xl p-4 flex flex-wrap gap-4 items-center animate-fade-in">
-              <div className="p-2 bg-pink-500/20 rounded-lg text-pink-400">
-                  <Gift className="w-5 h-5" />
-              </div>
-              <div className="flex-1">
-                  <h3 className="text-white font-medium">Upcoming Birthdays</h3>
-                  <p className="text-sm text-slate-400">Don't forget to wish them well!</p>
-              </div>
-              <div className="flex gap-3 overflow-x-auto pb-1">
-                  {upcomingBirthdays.map(p => (
-                      <div key={p.id} className="flex items-center gap-2 bg-dark-card border border-slate-700/50 rounded-lg px-3 py-2 min-w-[140px]">
-                          <img src={p.avatar || `https://ui-avatars.com/api/?name=${p.name}`} className="w-8 h-8 rounded-full" alt="" />
-                          <div className="flex flex-col">
-                              <span className="text-sm text-white font-medium truncate max-w-[80px]">{p.name}</span>
-                              <span className="text-[10px] text-pink-400">
-                                  {p.daysUntil === 0 ? 'Today!' : `In ${p.daysUntil} day${p.daysUntil > 1 ? 's' : ''}`}
-                              </span>
-                          </div>
-                      </div>
-                  ))}
-              </div>
-          </div>
-      )}
-
-      {/* Tasks & Reminders Widget - UPGRADED */}
-      {upcomingTasks.length > 0 && (
-          <div className="grid grid-cols-1 gap-4 animate-fade-in">
-            <div className="bg-dark-card p-5 rounded-2xl border border-slate-700/50 flex flex-col gap-4">
-                <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-3">
-                         <div className="p-2 bg-purple-500/20 rounded-lg text-purple-400">
-                            <CheckCircle2 className="w-5 h-5" />
-                         </div>
-                         <div>
-                            <h3 className="text-white font-medium">Upcoming & Recurring</h3>
-                            <p className="text-sm text-slate-400">Next obligations on your calendar</p>
-                         </div>
+        {/* Column 1 (Top on mobile): Priority Reconnects (RELATIONSHIPS FIRST) */}
+        <div className="bg-dark-card rounded-xl border border-slate-700/50 p-4 flex flex-col">
+             <div className="flex items-center justify-between mb-3">
+                <h2 className="text-base font-bold text-white flex items-center gap-2">
+                    <AlertTriangle className="w-4 h-4 text-yellow-500" />
+                    Needs Attention
+                </h2>
+                <Link to="/people" className="text-[10px] text-slate-400 hover:text-white flex items-center gap-1 transition-colors">View All <ArrowRight className="w-3 h-3"/></Link>
+             </div>
+             
+             <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 flex-1 content-start">
+                {overdueContacts.length === 0 ? (
+                    <div className="col-span-full h-full flex flex-col items-center justify-center py-6 text-slate-500 border border-dashed border-slate-800 rounded-lg">
+                        <TrendingUp className="w-6 h-6 mb-1 opacity-50" />
+                        <p className="text-xs">Relationships are healthy.</p>
                     </div>
-                    <Link to="/reminders" className="text-xs flex items-center gap-1 text-orbit-400 hover:text-white transition-colors">
-                        View All <ArrowRight className="w-3 h-3" />
-                    </Link>
-                </div>
-                
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                    {upcomingTasks.map(t => (
-                        <div key={t.id} className="flex items-center justify-between bg-slate-800/30 px-3 py-3 rounded-xl border border-slate-700/50 text-sm text-slate-200 group hover:border-orbit-500/50 hover:bg-slate-800/80 transition-all">
-                            <div className="flex items-center gap-3 overflow-hidden">
+                ) : (
+                    overdueContacts.slice(0, 4).map(p => (
+                         <div 
+                            key={p.id}
+                            onClick={() => navigate(`/person/${p.id}`)}
+                            className="bg-slate-800/30 p-2 rounded-lg border border-slate-700/50 hover:border-red-500/30 hover:bg-slate-800/80 transition-all cursor-pointer flex items-center gap-2"
+                         >
+                            <div className="relative shrink-0">
+                                <img src={p.avatar || `https://ui-avatars.com/api/?name=${p.name}`} className="w-8 h-8 rounded-full bg-slate-700" alt="" />
+                                <div className="absolute -bottom-1 -right-1 w-2.5 h-2.5 bg-red-500 rounded-full border-2 border-slate-800"></div>
+                            </div>
+                            <div className="overflow-hidden min-w-0 flex-1">
+                                <h4 className="text-white font-medium truncate text-xs">{p.name}</h4>
+                                <p className="text-[10px] text-red-400 truncate">
+                                    {p.lastContactDate ? timeAgo(p.lastContactDate) : 'Never contacted'}
+                                </p>
+                            </div>
+                            <button 
+                                onClick={(e) => handleQuickLog(p.id, e)}
+                                className="shrink-0 p-1.5 text-slate-500 hover:text-green-500 hover:bg-green-500/10 rounded-full transition-colors"
+                            >
+                                <CheckCircle2 className="w-4 h-4" />
+                            </button>
+                         </div>
+                    ))
+                )}
+             </div>
+        </div>
+
+        {/* Column 2: Up Next (Tasks) */}
+        <div className="bg-dark-card rounded-xl border border-slate-700/50 p-4 flex flex-col">
+             <div className="flex items-center justify-between mb-3">
+                <h2 className="text-base font-bold text-white flex items-center gap-2">
+                    <CheckCircle2 className="w-4 h-4 text-orbit-400" />
+                    Up Next
+                </h2>
+                <Link to="/reminders" className="text-[10px] text-slate-400 hover:text-white flex items-center gap-1 transition-colors">View All <ArrowRight className="w-3 h-3"/></Link>
+             </div>
+             
+             <div className="space-y-2 flex-1">
+                {upcomingTasks.length === 0 ? (
+                    <div className="h-full flex flex-col items-center justify-center py-6 text-slate-500 border border-dashed border-slate-800 rounded-lg">
+                        <CheckCircle2 className="w-6 h-6 mb-1 opacity-50" />
+                        <p className="text-xs">All caught up!</p>
+                        <Link to="/reminders" className="text-[10px] text-orbit-500 hover:text-orbit-400 mt-1">Add a task</Link>
+                    </div>
+                ) : (
+                    upcomingTasks.map(t => (
+                        <div key={t.id} className="flex items-center justify-between bg-slate-800/30 px-3 py-2 rounded-lg border border-slate-700/50 text-sm text-slate-200 group hover:border-orbit-500/50 hover:bg-slate-800/80 transition-all">
+                            <div className="flex items-center gap-2 overflow-hidden">
                                 <button 
                                     onClick={(e) => handleTaskToggle(t.id, e)}
                                     className="text-slate-500 hover:text-green-500 transition-colors shrink-0"
-                                    title="Mark Complete"
                                 >
-                                    <CircleIcon className="w-5 h-5" />
+                                    <CircleIcon className="w-4 h-4" />
                                 </button>
                                 <div className="flex flex-col overflow-hidden">
-                                    <Link to="/reminders" className="truncate hover:text-orbit-400 transition-colors font-medium">
+                                    <Link to="/reminders" className="truncate hover:text-orbit-400 transition-colors font-medium block text-xs">
                                         {t.title}
                                     </Link>
-                                    <div className="flex items-center gap-2 text-[10px] text-slate-500">
-                                        {t.recurrence && t.recurrence !== 'none' && (
-                                            <span className="flex items-center gap-0.5 text-purple-400 bg-purple-400/10 px-1.5 py-0.5 rounded">
-                                                <Repeat className="w-3 h-3" />
-                                                {t.recurrence}
+                                    <span className="text-[10px] text-slate-500 flex items-center gap-1">
+                                        {t.date && new Date(t.date).toLocaleDateString(undefined, {month:'short', day:'numeric'})}
+                                        {t.recurrence !== 'none' && <Repeat className="w-2.5 h-2.5" />}
+                                        {t.linkedPersonIds && t.linkedPersonIds.length > 0 && (
+                                            <span className="flex items-center gap-1 ml-1">
+                                                <Users className="w-2.5 h-2.5" />
                                             </span>
                                         )}
-                                        {t.date && (
-                                            <span className={`${t.date === new Date().toISOString().split('T')[0] ? 'text-green-400' : ''}`}>
-                                                {new Date(t.date).toLocaleDateString(undefined, {month:'short', day:'numeric'})}
-                                            </span>
-                                        )}
-                                    </div>
+                                    </span>
                                 </div>
                             </div>
+                            {t.date && (
+                                <button 
+                                    onClick={(e) => openGoogleCalendar(e, t)}
+                                    className="text-slate-600 hover:text-white p-1 rounded opacity-0 group-hover:opacity-100 transition-opacity"
+                                    title="Add to Google Calendar"
+                                >
+                                    <Calendar className="w-3 h-3" />
+                                </button>
+                            )}
                         </div>
-                    ))}
-                </div>
-            </div>
-          </div>
-      )}
-
-      {/* Quick Stats Row */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-        <div className="bg-dark-card p-6 rounded-2xl border border-slate-700/50 flex items-center justify-between">
-          <div>
-            <p className="text-slate-400 text-sm font-medium">Total Connections</p>
-            <p className="text-3xl font-bold text-white mt-1">{totalContacts}</p>
-          </div>
-          <div className="bg-slate-800 p-3 rounded-xl">
-            <Users className="w-6 h-6 text-orbit-500" />
-          </div>
-        </div>
-
-        <div className="bg-dark-card p-6 rounded-2xl border border-slate-700/50 flex items-center justify-between">
-          <div>
-            <p className="text-slate-400 text-sm font-medium">Needs Attention</p>
-            <p className="text-3xl font-bold text-red-400 mt-1">{overdueContacts.length}</p>
-          </div>
-          <div className="bg-red-500/10 p-3 rounded-xl">
-            <AlertTriangle className="w-6 h-6 text-red-500" />
-          </div>
-        </div>
-
-        <div className="bg-dark-card p-6 rounded-2xl border border-slate-700/50 flex items-center justify-between">
-          <div>
-            <p className="text-slate-400 text-sm font-medium">Healthy Relationships</p>
-            <p className="text-3xl font-bold text-green-400 mt-1">{healthyContacts.length}</p>
-          </div>
-          <div className="bg-green-500/10 p-3 rounded-xl">
-            <TrendingUp className="w-6 h-6 text-green-500" />
-          </div>
+                    ))
+                )}
+             </div>
         </div>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-        {/* Distribution Chart */}
-        <div className="bg-dark-card p-6 rounded-2xl border border-slate-700/50 flex flex-col col-span-1">
-            <h2 className="text-lg font-semibold text-white mb-4">Circle Distribution</h2>
-            <div className="h-48 w-full flex-1 min-h-[200px]">
-                <ResponsiveContainer width="100%" height="100%">
-                    <PieChart>
-                        <Pie
-                            data={circleData}
-                            cx="50%"
-                            cy="50%"
-                            innerRadius={50}
-                            outerRadius={70}
-                            paddingAngle={5}
-                            dataKey="value"
-                        >
-                            {circleData.map((entry, index) => (
-                                <Cell key={`cell-${index}`} fill={entry.color} stroke="none" />
-                            ))}
-                        </Pie>
-                        <Tooltip 
-                            contentStyle={{ backgroundColor: '#1e293b', borderColor: '#334155', color: '#fff' }}
-                            itemStyle={{ color: '#fff' }}
-                        />
-                    </PieChart>
-                </ResponsiveContainer>
-            </div>
-            <div className="flex flex-wrap justify-center gap-3 mt-4">
-                {circleData.map(c => (
-                    <div key={c.name} className="flex items-center gap-2 text-xs text-slate-300">
-                        <div className="w-2 h-2 rounded-full" style={{ backgroundColor: c.color }}></div>
-                        {c.name}
+      {/* Quick Stats & Birthdays Row */}
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          {/* Birthdays (Span 2 on Desktop) */}
+          <div className="md:col-span-2">
+            {upcomingBirthdays.length > 0 ? (
+                <div className="bg-gradient-to-r from-pink-500/10 to-purple-500/10 border border-pink-500/20 rounded-xl p-4 flex flex-col sm:flex-row items-center gap-4 h-full">
+                    <div className="p-2 bg-pink-500/20 rounded-lg text-pink-400 shrink-0">
+                        <Gift className="w-4 h-4" />
                     </div>
-                ))}
+                    <div className="text-center sm:text-left">
+                        <h3 className="text-white text-sm font-medium">Birthdays</h3>
+                    </div>
+                    <div className="flex-1 w-full overflow-x-auto pb-2 sm:pb-0 no-scrollbar">
+                        <div className="flex gap-2 justify-center sm:justify-start">
+                            {upcomingBirthdays.map(p => (
+                                <div key={p.id} className="flex items-center gap-2 bg-dark-card border border-slate-700/50 rounded px-2 py-1.5 min-w-[120px] shrink-0">
+                                    <img src={p.avatar || `https://ui-avatars.com/api/?name=${p.name}`} className="w-6 h-6 rounded-full" alt="" />
+                                    <div className="flex flex-col">
+                                        <span className="text-xs text-white font-medium truncate max-w-[80px]">{p.name}</span>
+                                        <span className="text-[10px] text-pink-400">
+                                            {p.daysUntil === 0 ? 'Today!' : `In ${p.daysUntil} day${p.daysUntil > 1 ? 's' : ''}`}
+                                        </span>
+                                    </div>
+                                </div>
+                            ))}
+                        </div>
+                    </div>
+                </div>
+            ) : (
+                <div className="bg-dark-card p-4 rounded-xl border border-slate-700/50 h-full flex items-center gap-3">
+                    <div className="p-2 bg-slate-800 rounded-lg text-slate-500">
+                        <Gift className="w-4 h-4" />
+                    </div>
+                    <div>
+                        <h3 className="text-slate-300 text-sm font-medium">No upcoming birthdays</h3>
+                    </div>
+                </div>
+            )}
+          </div>
+
+          {/* Simple Stats Card */}
+          <div className="bg-dark-card p-4 rounded-xl border border-slate-700/50 flex flex-col justify-center">
+             <div className="flex justify-between items-end mb-2">
+                <p className="text-slate-400 text-[10px] font-medium uppercase tracking-wider">Health</p>
+                <div className="flex items-baseline gap-1">
+                    <span className="text-2xl font-bold text-white">{Math.round((healthyContacts.length / (totalContacts || 1)) * 100)}%</span>
+                </div>
+             </div>
+             <div className="w-full bg-slate-800 h-1.5 rounded-full overflow-hidden">
+                 <div 
+                    className="bg-green-500 h-full rounded-full transition-all duration-1000" 
+                    style={{ width: `${(healthyContacts.length / (totalContacts || 1)) * 100}%` }}
+                 ></div>
+             </div>
+          </div>
+      </div>
+
+      {/* INSIGHTS DECK (Tabbed View) */}
+      <div className="bg-dark-card rounded-xl border border-slate-700/50 overflow-hidden">
+            <div className="flex border-b border-slate-700">
+                <button 
+                    onClick={() => setInsightTab('activity')} 
+                    className={`flex-1 py-3 text-xs font-medium flex items-center justify-center gap-2 transition-colors ${insightTab === 'activity' ? 'bg-slate-800/50 text-white border-b-2 border-orbit-500' : 'text-slate-400 hover:bg-slate-800/30 hover:text-slate-200'}`}
+                >
+                    <Clock className="w-3.5 h-3.5" /> Recent Activity
+                </button>
+                <button 
+                    onClick={() => setInsightTab('distribution')} 
+                    className={`flex-1 py-3 text-xs font-medium flex items-center justify-center gap-2 transition-colors ${insightTab === 'distribution' ? 'bg-slate-800/50 text-white border-b-2 border-orbit-500' : 'text-slate-400 hover:bg-slate-800/30 hover:text-slate-200'}`}
+                >
+                    <BarChart3 className="w-3.5 h-3.5" /> Network Overview
+                </button>
             </div>
-        </div>
-        
-        {/* Activity Bar Chart */}
-        <div className="bg-dark-card p-6 rounded-2xl border border-slate-700/50 lg:col-span-2">
-            <h2 className="text-lg font-semibold text-white mb-6 flex items-center gap-2">
-                <Calendar className="w-5 h-5 text-orbit-500" />
-                Activity History
-            </h2>
-            <div className="h-64 w-full">
-                <ResponsiveContainer width="100%" height="100%">
-                    <BarChart data={barData}>
-                        <CartesianGrid strokeDasharray="3 3" stroke="#334155" vertical={false} />
-                        <XAxis dataKey="name" stroke="#94a3b8" fontSize={12} tickLine={false} axisLine={false} />
-                        <YAxis stroke="#94a3b8" fontSize={12} tickLine={false} axisLine={false} />
-                        <Tooltip 
-                            cursor={{fill: '#334155', opacity: 0.2}}
-                            contentStyle={{ backgroundColor: '#1e293b', borderColor: '#334155', color: '#fff', borderRadius: '8px' }}
-                        />
-                        <Bar dataKey="interactions" fill="#0ea5e9" radius={[4, 4, 0, 0]} />
-                    </BarChart>
-                </ResponsiveContainer>
+            
+            <div className="p-4 min-h-[250px]">
+                {insightTab === 'activity' ? (
+                    <div className="animate-fade-in">
+                        <div className="space-y-0">
+                            {globalFeed.length === 0 ? (
+                                <div className="text-center py-8">
+                                    <p className="text-slate-500 text-sm">No history yet. Log an interaction to see it here.</p>
+                                </div>
+                            ) : (
+                                globalFeed.map((item, idx) => (
+                                    <div key={`${item.id}-${idx}`} className="relative pl-6 pb-6 border-l border-slate-800 last:pb-0 last:border-0">
+                                        {/* Dot */}
+                                        <div className="absolute left-[-4px] top-1.5 w-2 h-2 rounded-full bg-slate-700 border border-dark-card ring-4 ring-dark-card"></div>
+                                        
+                                        <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-2 group cursor-pointer hover:bg-slate-800/20 -mt-2 -ml-2 p-2 rounded-lg transition-colors" onClick={() => navigate(`/person/${item.personId}`)}>
+                                            <div className="flex items-start gap-3">
+                                                <img src={item.personAvatar || `https://ui-avatars.com/api/?name=${item.personName}`} className="w-8 h-8 rounded-full border border-slate-700 bg-slate-800" alt="" />
+                                                <div>
+                                                    <div className="flex items-center gap-2 flex-wrap">
+                                                        <span className="text-white font-bold text-xs group-hover:text-orbit-400 transition-colors">{item.personName}</span>
+                                                        <span className="text-[10px] px-1.5 py-0.5 rounded bg-slate-800 text-slate-400 border border-slate-700 uppercase tracking-wider font-semibold">{item.type}</span>
+                                                    </div>
+                                                    <p className="text-xs text-slate-300 line-clamp-2 mt-1 leading-relaxed">{item.notes}</p>
+                                                </div>
+                                            </div>
+                                            <div className="text-right shrink-0 pl-11 sm:pl-0">
+                                                <span className="text-[10px] text-slate-500 block font-medium">{timeAgo(item.date)}</span>
+                                            </div>
+                                        </div>
+                                    </div>
+                                ))
+                            )}
+                        </div>
+                    </div>
+                ) : (
+                    <div className="animate-fade-in h-full flex flex-col md:flex-row items-center justify-center gap-8">
+                        <div className="h-48 w-full md:w-1/2">
+                            <ResponsiveContainer width="100%" height="100%">
+                                <PieChart>
+                                    <Pie
+                                        data={circleData}
+                                        cx="50%"
+                                        cy="50%"
+                                        innerRadius={50}
+                                        outerRadius={70}
+                                        paddingAngle={5}
+                                        dataKey="value"
+                                    >
+                                        {circleData.map((entry, index) => (
+                                            <Cell key={`cell-${index}`} fill={entry.color} stroke="none" />
+                                        ))}
+                                    </Pie>
+                                    <Tooltip 
+                                        contentStyle={{ backgroundColor: '#1e293b', borderColor: '#334155', color: '#fff', borderRadius: '8px', fontSize: '12px' }}
+                                        itemStyle={{ color: '#fff' }}
+                                    />
+                                </PieChart>
+                            </ResponsiveContainer>
+                        </div>
+                        <div className="w-full md:w-1/2 grid grid-cols-2 gap-2">
+                            {circleData.map(c => (
+                                <div key={c.name} className="bg-slate-800/50 p-2 rounded-lg border border-slate-700 flex items-center justify-between">
+                                    <div className="flex items-center gap-2">
+                                        <div className="w-2 h-2 rounded-full shadow-sm" style={{ backgroundColor: c.color }}></div>
+                                        <span className="text-xs text-slate-200 font-medium">{c.name}</span>
+                                    </div>
+                                    <span className="text-xs font-bold text-white">{c.value}</span>
+                                </div>
+                            ))}
+                        </div>
+                    </div>
+                )}
             </div>
-        </div>
       </div>
 
       <InteractionModal 

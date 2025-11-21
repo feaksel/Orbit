@@ -2,7 +2,8 @@
 import React, { useState, useEffect } from 'react';
 import { getTasks, saveTask, toggleTaskCompletion, deleteTask, getPeople, generateId, DATA_UPDATE_EVENT } from '../services/storageService';
 import { Task, Person } from '../types';
-import { CheckCircle2, Circle as CircleIcon, Plus, Trash2, Calendar, Repeat, Tag, Users, List, ClipboardList, Archive, Undo2, ChevronLeft, ChevronRight, ArrowRightCircle, Inbox } from 'lucide-react';
+import { generateGoogleCalendarUrl } from '../utils/calendarUtils';
+import { CheckCircle2, Circle as CircleIcon, Plus, Trash2, Calendar, Repeat, Tag, Users, List, ClipboardList, Archive, Undo2, ChevronLeft, ChevronRight, ArrowRightCircle, Inbox, ExternalLink } from 'lucide-react';
 
 export const Reminders: React.FC = () => {
   const [tasks, setTasks] = useState<Task[]>([]);
@@ -97,6 +98,13 @@ export const Reminders: React.FC = () => {
       refresh();
   };
 
+  const openGoogleCalendar = (e: React.MouseEvent, task: Task) => {
+    e.stopPropagation();
+    const related = people.filter(p => task.linkedPersonIds?.includes(p.id));
+    const url = generateGoogleCalendarUrl(task, related);
+    window.open(url, '_blank');
+  };
+
   // --- Calendar Logic ---
   const getDaysInMonth = (year: number, month: number) => new Date(year, month + 1, 0).getDate();
   const getFirstDayOfMonth = (year: number, month: number) => new Date(year, month, 1).getDay();
@@ -139,7 +147,14 @@ export const Reminders: React.FC = () => {
                             title={t.title}
                           >
                               {t.type === 'task' ? <CircleIcon className="w-2 h-2 shrink-0" /> : <Calendar className="w-2 h-2 shrink-0" />}
-                              <span className="truncate">{t.title}</span>
+                              <span className="truncate flex-1">{t.title}</span>
+                              <button 
+                                onClick={(e) => openGoogleCalendar(e, t)}
+                                className="hover:text-white hover:bg-black/20 rounded p-0.5 opacity-0 group-hover:opacity-100 transition-opacity"
+                                title="Add to Google Calendar"
+                              >
+                                  <ExternalLink className="w-2 h-2" />
+                              </button>
                           </div>
                       ))}
                   </div>
@@ -423,13 +438,24 @@ export const Reminders: React.FC = () => {
                                                 </div>
                                             </div>
                                         </div>
-                                        <button 
-                                            onClick={(e) => handleDelete(task.id, e)} 
-                                            className="text-slate-600 hover:text-red-500 md:opacity-0 md:group-hover:opacity-100 transition-opacity p-2"
-                                            title="Delete"
-                                        >
-                                            <Trash2 className="w-4 h-4" />
-                                        </button>
+                                        <div className="flex items-center gap-1">
+                                            {task.date && (
+                                                <button 
+                                                    onClick={(e) => openGoogleCalendar(e, task)}
+                                                    className="text-slate-600 hover:text-white p-2 md:opacity-0 md:group-hover:opacity-100 transition-opacity"
+                                                    title="Add to Google Calendar"
+                                                >
+                                                    <ExternalLink className="w-4 h-4" />
+                                                </button>
+                                            )}
+                                            <button 
+                                                onClick={(e) => handleDelete(task.id, e)} 
+                                                className="text-slate-600 hover:text-red-500 md:opacity-0 md:group-hover:opacity-100 transition-opacity p-2"
+                                                title="Delete"
+                                            >
+                                                <Trash2 className="w-4 h-4" />
+                                            </button>
+                                        </div>
                                     </div>
                                 ))}
                             </div>

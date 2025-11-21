@@ -1,6 +1,7 @@
+
 import React from 'react';
 import { NavLink, useLocation } from 'react-router-dom';
-import { LayoutDashboard, Users, PlusCircle, Search, Menu, CalendarCheck, Settings } from 'lucide-react';
+import { LayoutDashboard, Users, PlusCircle, Search, Menu, CalendarCheck, Settings, Activity } from 'lucide-react';
 
 export const Sidebar: React.FC = () => {
   const linkClass = ({ isActive }: { isActive: boolean }) => 
@@ -45,7 +46,10 @@ export const Sidebar: React.FC = () => {
             <img src="https://ui-avatars.com/api/?name=User&background=334155&color=fff" alt="User" className="w-8 h-8 rounded-full" />
             <div className="text-sm">
                 <p className="text-white font-medium">Demo User</p>
-                <p className="text-slate-500 text-xs">Pro Plan</p>
+                <div className="flex items-center gap-2 text-xs text-slate-500 mt-1">
+                    <span className="bg-slate-800 px-1.5 py-0.5 rounded border border-slate-700">⇧+A Add</span>
+                    <span className="bg-slate-800 px-1.5 py-0.5 rounded border border-slate-700">⇧+L Log</span>
+                </div>
             </div>
         </div>
       </div>
@@ -79,8 +83,8 @@ export const MobileBottomNav: React.FC<MobileBottomNavProps> = ({ onOpenGroupLog
         </NavLink>
         
         <NavLink to="/people" className={`flex flex-col items-center justify-center w-full h-full ${isActive('/people') ? 'text-orbit-500' : 'text-slate-400'}`}>
-          <Users className="w-6 h-6" />
-          <span className="text-[10px] mt-1">People</span>
+           <Users className="w-6 h-6" />
+           <span className="text-[10px] mt-1">People</span>
         </NavLink>
 
         <button 
@@ -92,14 +96,14 @@ export const MobileBottomNav: React.FC<MobileBottomNavProps> = ({ onOpenGroupLog
           </div>
         </button>
 
-        <NavLink to="/reminders" className={`flex flex-col items-center justify-center w-full h-full ${isActive('/reminders') ? 'text-orbit-500' : 'text-slate-400'}`}>
+        <NavLink to="/reminders" className={`flex flex-col items-center justify-center w-full h-full ${isActive('/reminders') ? 'text-orbit-500' : 'text-slate-600'}`}>
            <CalendarCheck className="w-6 h-6" />
            <span className="text-[10px] mt-1">Tasks</span>
         </NavLink>
 
         <NavLink to="/settings" className={`flex flex-col items-center justify-center w-full h-full ${isActive('/settings') ? 'text-orbit-500' : 'text-slate-600'}`}>
            <Settings className="w-6 h-6" />
-           <span className="text-[10px] mt-1">Settings</span>
+           <span className="text-[10px] mt-1">Data</span>
         </NavLink>
       </div>
     </div>
