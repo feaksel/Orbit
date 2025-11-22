@@ -1,3 +1,4 @@
+
 import React, { useEffect, useState } from 'react';
 import { getPeople, getCircles, addInteraction, getTasks, toggleTaskCompletion, snoozePerson, DATA_UPDATE_EVENT, SYNC_STATUS_EVENT, getSyncStatus, SyncStatus } from '../services/storageService';
 import { Person, Circle, InteractionType, Task, Interaction } from '../types';
@@ -6,12 +7,13 @@ import { calculateHealthScore } from '../components/HealthBadge';
 import { AlertTriangle, Calendar, Gift, CheckCircle2, Repeat, Cloud, CloudOff, RefreshCw, Clock, History, Sparkles, BarChart3, Activity, PieChart as PieIcon } from 'lucide-react';
 import { Link, useNavigate } from 'react-router-dom';
 import { PieChart, Pie, Cell, Tooltip, ResponsiveContainer, BarChart, Bar } from 'recharts';
+import { timeAgo } from '../utils/dateUtils';
 
 // Helper Component for Dynamic Greeting
 const TypewriterHeader = () => {
   const [text, setText] = useState('');
   const hour = new Date().getHours();
-  const greeting = hour < 12 ? 'Good morning, Emir.' : hour < 18 ? 'Good afternoon, Emir.' : 'Good evening, Emir.';
+  const greeting = hour < 12 ? 'Good morning.' : hour < 18 ? 'Good afternoon.' : 'Good evening.';
   
   useEffect(() => {
     let i = 0;
