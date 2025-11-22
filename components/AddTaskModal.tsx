@@ -74,7 +74,7 @@ export const AddTaskModal: React.FC<AddTaskModalProps> = ({ isOpen, onClose, onA
         {/* Header */}
         <div className="p-5 border-b border-slate-700 flex justify-between items-center">
           <h2 className="text-xl font-bold text-white flex items-center gap-2">
-            <Check className="text-emerald-500" /> New Task
+            <Check className="text-orbit-500" /> New Task
           </h2>
           <button onClick={onClose} className="text-slate-400 hover:text-white">
             <X className="w-6 h-6" />
@@ -87,7 +87,7 @@ export const AddTaskModal: React.FC<AddTaskModalProps> = ({ isOpen, onClose, onA
                 <label className="text-sm font-medium text-slate-300">What needs to be done?</label>
                 <input 
                     placeholder="e.g. Buy gift for Mom, Prepare Q3 Report"
-                    className="w-full bg-dark-bg border border-slate-700 rounded-lg px-3 py-3 text-white focus:ring-2 focus:ring-emerald-500/50 outline-none font-medium"
+                    className="w-full bg-dark-bg border border-slate-700 rounded-lg px-3 py-3 text-white focus:ring-2 focus:ring-orbit-500/50 outline-none font-medium"
                     value={form.title}
                     onChange={e => setForm({...form, title: e.target.value})}
                     autoFocus
@@ -204,7 +204,7 @@ export const AddTaskModal: React.FC<AddTaskModalProps> = ({ isOpen, onClose, onA
             <button 
                 onClick={handleSave}
                 disabled={!form.title}
-                className="px-6 py-2 bg-emerald-600 hover:bg-emerald-500 disabled:opacity-50 disabled:cursor-not-allowed text-white rounded-lg font-medium text-sm transition-colors shadow-lg shadow-emerald-600/20 flex items-center gap-2"
+                className="px-6 py-2 bg-orbit-600 hover:bg-orbit-500 disabled:opacity-50 disabled:cursor-not-allowed text-white rounded-lg font-medium text-sm transition-colors shadow-lg shadow-orbit-600/20 flex items-center gap-2"
             >
                 <Check className="w-4 h-4" />
                 Save Task

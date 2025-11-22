@@ -33,11 +33,11 @@ export const ActionMenu: React.FC<ActionMenuProps> = ({ isOpen, onClose, onLog, 
             onClick={() => { onAddTask(); onClose(); }}
             className="flex items-center gap-4 group w-full"
         >
-            <div className="w-12 h-12 bg-emerald-600 hover:bg-emerald-500 text-white rounded-2xl shadow-lg shadow-emerald-600/30 flex items-center justify-center transition-transform group-hover:scale-105 md:order-1">
+            <div className="w-12 h-12 bg-orbit-500 hover:bg-orbit-400 text-white rounded-2xl shadow-lg shadow-orbit-500/30 flex items-center justify-center transition-transform group-hover:scale-105 md:order-1">
                 <CheckSquare className="w-6 h-6" />
             </div>
             <div className="md:order-2 flex flex-col items-end md:items-start">
-                <span className="text-white font-bold text-sm group-hover:text-emerald-400 transition-colors">Add Task</span>
+                <span className="text-white font-bold text-sm group-hover:text-orbit-400 transition-colors">Add Task</span>
                 <span className="text-slate-400 text-xs">Reminder or To-Do</span>
             </div>
         </button>
@@ -47,11 +47,11 @@ export const ActionMenu: React.FC<ActionMenuProps> = ({ isOpen, onClose, onLog, 
             onClick={() => { onAddPerson(); onClose(); }}
             className="flex items-center gap-4 group w-full"
         >
-            <div className="w-12 h-12 bg-blue-600 hover:bg-blue-500 text-white rounded-2xl shadow-lg shadow-blue-600/30 flex items-center justify-center transition-transform group-hover:scale-105 md:order-1">
+            <div className="w-12 h-12 bg-orbit-600 hover:bg-orbit-500 text-white rounded-2xl shadow-lg shadow-orbit-600/30 flex items-center justify-center transition-transform group-hover:scale-105 md:order-1">
                 <UserPlus className="w-6 h-6" />
             </div>
             <div className="md:order-2 flex flex-col items-end md:items-start">
-                <span className="text-white font-bold text-sm group-hover:text-blue-400 transition-colors">Add Contact</span>
+                <span className="text-white font-bold text-sm group-hover:text-orbit-400 transition-colors">Add Contact</span>
                 <span className="text-slate-400 text-xs">New person</span>
             </div>
         </button>
@@ -61,7 +61,7 @@ export const ActionMenu: React.FC<ActionMenuProps> = ({ isOpen, onClose, onLog, 
             onClick={() => { onLog(); onClose(); }}
             className="flex items-center gap-4 group w-full"
         >
-            <div className="w-12 h-12 bg-orbit-600 hover:bg-orbit-500 text-white rounded-2xl shadow-lg shadow-orbit-600/30 flex items-center justify-center transition-transform group-hover:scale-105 md:order-1">
+            <div className="w-12 h-12 bg-orbit-700 hover:bg-orbit-600 text-white rounded-2xl shadow-lg shadow-orbit-700/30 flex items-center justify-center transition-transform group-hover:scale-105 md:order-1">
                 <MessageSquare className="w-6 h-6" />
             </div>
             <div className="md:order-2 flex flex-col items-end md:items-start">

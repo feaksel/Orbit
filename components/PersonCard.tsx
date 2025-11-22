@@ -1,3 +1,4 @@
+
 import React from 'react';
 import { Person, Circle } from '../types';
 import { HealthBadge, calculateHealthScore } from './HealthBadge';
@@ -91,7 +92,7 @@ export const PersonCard: React.FC<PersonCardProps> = ({ person, circles, onQuick
       {onQuickLog && (
         <button
           onClick={(e) => onQuickLog(person.id, e)}
-          className="absolute top-16 right-4 p-2.5 rounded-full bg-slate-800/80 hover:bg-green-500/20 text-slate-400 hover:text-green-500 transition-colors border border-slate-700 hover:border-green-500/50 z-10 opacity-0 group-hover:opacity-100"
+          className="absolute top-16 right-4 p-2.5 rounded-full bg-slate-800/80 hover:bg-orbit-500/20 text-slate-400 hover:text-orbit-500 transition-colors border border-slate-700 hover:border-orbit-500/50 z-10 opacity-0 group-hover:opacity-100"
           title="Quick Log Interaction"
         >
           <CheckCircle2 className="w-5 h-5" />

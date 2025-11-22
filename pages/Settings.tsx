@@ -1,6 +1,6 @@
 
 import React, { useState, useEffect } from 'react';
-import { Download, Upload, Trash2, AlertTriangle, Check, FileJson, HardDrive, Shield, Palette } from 'lucide-react';
+import { Download, Upload, Trash2, AlertTriangle, Check, HardDrive, Shield, Palette, Sparkles } from 'lucide-react';
 import { exportData, importData, clearAllData } from '../services/storageService';
 import { THEMES, ThemeId, applyTheme, getStoredTheme } from '../services/themeService';
 
@@ -72,28 +72,35 @@ export const Settings: React.FC = () => {
               </h2>
           </div>
           <div className="p-6">
-              <p className="text-sm text-slate-400 mb-4">Select an accent theme for your workspace.</p>
-              <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
+              <p className="text-sm text-slate-400 mb-4">Choose an accent theme for your workspace.</p>
+              <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3">
                   {(Object.keys(THEMES) as ThemeId[]).map((id) => (
                       <button
                         key={id}
                         onClick={() => handleThemeChange(id)}
-                        className={`p-3 rounded-xl border transition-all flex items-center gap-3 ${
+                        className={`group relative p-3 rounded-xl border transition-all flex flex-col items-center gap-3 overflow-hidden ${
                             currentTheme === id 
                             ? 'bg-slate-800 border-orbit-500 ring-1 ring-orbit-500/50' 
                             : 'bg-slate-800/50 border-slate-700 hover:border-slate-500 hover:bg-slate-800'
                         }`}
                       >
                           <div 
-                            className="w-8 h-8 rounded-full shadow-lg" 
-                            style={{ background: THEMES[id].colors[500] }}
-                          ></div>
-                          <div className="text-left">
-                              <div className={`text-sm font-medium ${currentTheme === id ? 'text-white' : 'text-slate-300'}`}>
+                            className={`w-12 h-12 rounded-full shadow-lg flex items-center justify-center transition-transform group-hover:scale-110 ${currentTheme === id ? 'scale-110' : ''}`}
+                            style={{ 
+                                background: `linear-gradient(135deg, ${THEMES[id].colors[400]}, ${THEMES[id].colors[600]})` 
+                            }}
+                          >
+                              {currentTheme === id && <Check className="w-5 h-5 text-white" />}
+                          </div>
+                          <div className="text-center">
+                              <div className={`text-xs font-bold uppercase tracking-wide ${currentTheme === id ? 'text-white' : 'text-slate-400'}`}>
                                   {THEMES[id].name}
                               </div>
-                              {currentTheme === id && <div className="text-[10px] text-orbit-400">Active</div>}
                           </div>
+                          {/* Active Glow */}
+                          {currentTheme === id && (
+                              <div className="absolute inset-0 bg-orbit-500/5 pointer-events-none" />
+                          )}
                       </button>
                   ))}
               </div>
