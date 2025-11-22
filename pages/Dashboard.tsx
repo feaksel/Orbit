@@ -369,14 +369,14 @@ export const Dashboard: React.FC = () => {
                         
                         {/* Slick Progress Bar */}
                         <div className="h-4 w-full bg-slate-800 rounded-full overflow-hidden flex relative mb-4 shadow-inner">
-                             <div style={{width: `${healthyPct}%`}} className="bg-orbit-500 h-full transition-all duration-1000" />
+                             <div style={{width: `${healthyPct}%`}} className="bg-emerald-500 h-full transition-all duration-1000" />
                              <div style={{width: `${driftingPct}%`}} className="bg-yellow-500 h-full transition-all duration-1000" />
                              <div style={{width: `${overduePct}%`}} className="bg-red-500 h-full transition-all duration-1000" />
                         </div>
                         
                         <div className="flex justify-between text-xs text-slate-400 mt-2">
                             <div className="flex items-center gap-2">
-                                <span className="w-2 h-2 rounded-full bg-orbit-500"></span>
+                                <span className="w-2 h-2 rounded-full bg-emerald-500"></span>
                                 <span>Healthy ({Math.round(healthyPct)}%)</span>
                             </div>
                             <div className="flex items-center gap-2">

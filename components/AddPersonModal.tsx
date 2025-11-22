@@ -257,21 +257,16 @@ export const AddPersonModal: React.FC<AddPersonModalProps> = ({ isOpen, onClose,
                 </div>
                  <div className="space-y-2">
                     <label className="text-sm font-medium text-slate-300 flex items-center gap-2">
-                        <Clock className="w-3 h-3" /> Frequency
+                        <Clock className="w-3 h-3" /> Frequency (Days)
                     </label>
-                    <select 
+                    <input
+                        type="number"
+                        min="1"
                         value={form.desiredFrequencyDays}
-                        onChange={e => setForm({...form, desiredFrequencyDays: Number(e.target.value)})}
+                        onChange={e => setForm({...form, desiredFrequencyDays: parseInt(e.target.value) || 0})}
                         className="w-full bg-dark-bg border border-slate-700 rounded-lg px-3 py-2 text-sm text-white focus:ring-2 focus:ring-orbit-500 outline-none"
-                    >
-                        <option value={7}>Weekly</option>
-                        <option value={14}>Every 2 Weeks</option>
-                        <option value={30}>Monthly</option>
-                        <option value={60}>Every 2 Months</option>
-                        <option value={90}>Quarterly</option>
-                        <option value={180}>Every 6 Months</option>
-                        <option value={365}>Yearly</option>
-                    </select>
+                        placeholder="14"
+                    />
                 </div>
             </div>
             

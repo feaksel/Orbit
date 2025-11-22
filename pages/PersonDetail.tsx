@@ -544,19 +544,14 @@ export const PersonDetail: React.FC = () => {
                         <Clock className="w-4 h-4 text-slate-500" />
                         {isEditingProfile ? (
                             <div className="flex items-center gap-2 flex-1">
-                                <select 
-                                    className="flex-1 bg-slate-800 border border-slate-700 rounded px-2 py-1 text-white outline-none focus:ring-1 focus:ring-orbit-500 text-sm"
+                                <input
+                                    type="number"
+                                    min="1"
+                                    className="w-20 bg-slate-800 border border-slate-700 rounded px-2 py-1 text-white outline-none focus:ring-1 focus:ring-orbit-500 text-sm"
                                     value={editForm.desiredFrequencyDays}
-                                    onChange={e => setEditForm({...editForm, desiredFrequencyDays: Number(e.target.value)})}
-                                >
-                                    <option value={7}>Weekly</option>
-                                    <option value={14}>Every 2 Weeks</option>
-                                    <option value={30}>Monthly</option>
-                                    <option value={60}>Every 2 Months</option>
-                                    <option value={90}>Quarterly</option>
-                                    <option value={180}>Every 6 Months</option>
-                                    <option value={365}>Yearly</option>
-                                </select>
+                                    onChange={e => setEditForm({...editForm, desiredFrequencyDays: parseInt(e.target.value) || 0})}
+                                />
+                                <span className="text-slate-400 text-xs">days</span>
                             </div>
                         ) : (
                             <span>Every {person.desiredFrequencyDays} days</span>

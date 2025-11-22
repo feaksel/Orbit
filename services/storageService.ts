@@ -456,6 +456,12 @@ export const toggleTaskCompletion = (taskId: string): void => {
         const wasCompleted = task.isCompleted;
         task.isCompleted = !wasCompleted;
         
+        // If it was an inbox task (no date) and is now completed, stamp it with today's date
+        // so it shows up in the daily archive log.
+        if (!wasCompleted && !task.date) {
+            task.date = new Date().toISOString().split('T')[0];
+        }
+        
         if (!wasCompleted && task.recurrence && task.recurrence !== 'none') {
             const nextDate = new Date(task.date || new Date().toISOString());
             
