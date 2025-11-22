@@ -440,6 +440,7 @@ export const Dashboard: React.FC = () => {
                  </div>
              </div>
         </div>
+      </div>
 
         {/* CONTEXT SECTION: Memory Lane & Birthdays */}
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
