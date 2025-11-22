@@ -1,4 +1,3 @@
-
 import React, { useEffect, useState } from 'react';
 import { getPeople, getCircles, addInteraction, getTasks, toggleTaskCompletion, snoozePerson, DATA_UPDATE_EVENT, SYNC_STATUS_EVENT, getSyncStatus, SyncStatus } from '../services/storageService';
 import { Person, Circle, InteractionType, Task, Interaction } from '../types';
@@ -6,7 +5,7 @@ import { MagicInput } from '../components/MagicInput';
 import { calculateHealthScore } from '../components/HealthBadge';
 import { AlertTriangle, Calendar, Gift, CheckCircle2, Repeat, Cloud, CloudOff, RefreshCw, Clock, History, Sparkles, BarChart3, Activity, PieChart as PieIcon } from 'lucide-react';
 import { Link, useNavigate } from 'react-router-dom';
-import { PieChart, Pie, Cell, Tooltip, ResponsiveContainer, BarChart, Bar, XAxis, YAxis } from 'recharts';
+import { PieChart, Pie, Cell, Tooltip, ResponsiveContainer, BarChart, Bar } from 'recharts';
 
 // Helper Component for Dynamic Greeting
 const TypewriterHeader = () => {
@@ -85,7 +84,7 @@ export const Dashboard: React.FC = () => {
                 if (overdueCount > 0 || todayTaskCount > 0) {
                     new Notification("Orbit Daily Briefing", {
                         body: `You have ${overdueCount} connections needing attention and ${todayTaskCount} tasks for today.`,
-                        icon: "https://ui-avatars.com/api/?name=Orbit&background=8b5cf6&color=fff&rounded=true&bold=true"
+                        icon: "https://ui-avatars.com/api/?name=Orbit&background=10b981&color=fff&rounded=true&bold=true"
                     });
                     localStorage.setItem('orbit_last_notification', today);
                 }
