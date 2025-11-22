@@ -456,7 +456,7 @@ export const PersonDetail: React.FC = () => {
                             )}
                         </div>
 
-                         <a href={`tel:${person.phone}`} className={`bg-green-600 hover:bg-green-500 text-white p-2.5 rounded-lg flex items-center justify-center transition-colors ${!person.phone && 'opacity-50 cursor-not-allowed pointer-events-none'}`}>
+                         <a href={`tel:${person.phone}`} className={`bg-orbit-600 hover:bg-orbit-500 text-white p-2.5 rounded-lg flex items-center justify-center transition-colors ${!person.phone && 'opacity-50 cursor-not-allowed pointer-events-none'}`}>
                             <Phone className="w-4 h-4" />
                         </a>
                         <a href={`sms:${person.phone}`} className={`flex-1 bg-slate-800 hover:bg-slate-700 text-slate-200 py-2.5 rounded-lg flex items-center justify-center gap-2 transition-colors ${!person.phone && 'opacity-50 cursor-not-allowed pointer-events-none'}`}>
@@ -471,7 +471,7 @@ export const PersonDetail: React.FC = () => {
                 {isEditingProfile && (
                     <button 
                         onClick={handleSaveProfile}
-                        className="mt-4 w-full py-2 bg-green-600 hover:bg-green-500 text-white rounded-lg text-sm font-medium flex items-center justify-center gap-2"
+                        className="mt-4 w-full py-2 bg-orbit-600 hover:bg-orbit-500 text-white rounded-lg text-sm font-medium flex items-center justify-center gap-2"
                     >
                         <Save className="w-4 h-4" /> Save Changes
                     </button>
@@ -642,9 +642,9 @@ export const PersonDetail: React.FC = () => {
         {/* Right Column: Interactions & Notes */}
         <div className="lg:col-span-2 space-y-6">
 
-            {/* Linked Tasks Section */}
+            {/* Linked Tasks Section - USING ORBIT THEME */}
             {linkedTasks.length > 0 && (
-                <div className="bg-gradient-to-r from-orbit-900/20 to-purple-900/20 p-6 rounded-2xl border border-orbit-500/20">
+                <div className="bg-gradient-to-r from-orbit-900/20 to-slate-900/20 p-6 rounded-2xl border border-orbit-500/20">
                      <h2 className="text-lg font-bold text-white flex items-center gap-2 mb-4">
                         <CheckCircle2 className="w-5 h-5 text-orbit-400" />
                         Upcoming Plans

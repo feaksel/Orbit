@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { X, Check, Search, Users, Calendar, MessageSquare } from 'lucide-react';
 import { Person, Circle, InteractionType } from '../types';
@@ -77,11 +78,11 @@ export const InteractionModal: React.FC<InteractionModalProps> = ({ isOpen, onCl
           <h2 className="text-xl font-bold text-white flex items-center gap-2">
             {initialPersonId ? (
                 <>
-                    <Check className="text-green-500" /> Quick Tick-off
+                    <Check className="text-orbit-500" /> Quick Tick-off
                 </>
             ) : (
                 <>
-                    <Users className="text-orbit-500" /> Log Event (Multiple People)
+                    <Users className="text-orbit-500" /> Log Interaction
                 </>
             )}
           </h2>
@@ -91,7 +92,7 @@ export const InteractionModal: React.FC<InteractionModalProps> = ({ isOpen, onCl
         </div>
 
         {/* Body */}
-        <div className="p-6 overflow-y-auto flex-1 space-y-6">
+        <div className="p-6 overflow-y-auto flex-1 space-y-5">
             
             {/* Selector (Only show in group mode or if user wants to change selection) */}
             {!initialPersonId && (
@@ -115,17 +116,17 @@ export const InteractionModal: React.FC<InteractionModalProps> = ({ isOpen, onCl
 
                     {/* Search & List */}
                     <div className="relative">
-                        <Search className="absolute left-3 top-2.5 h-4 w-4 text-slate-500" />
+                        <Search className="absolute left-3 top-3 h-4 w-4 text-slate-500" />
                         <input 
                             type="text"
                             placeholder="Search to add people..."
-                            className="w-full bg-dark-bg border border-slate-700 rounded-lg pl-9 pr-4 py-2 text-sm text-white focus:ring-2 focus:ring-orbit-500 outline-none"
+                            className="w-full bg-dark-bg border border-slate-700 rounded-lg pl-10 pr-4 py-3 text-sm text-white focus:ring-2 focus:ring-orbit-500/50 outline-none transition-all"
                             value={search}
                             onChange={(e) => setSearch(e.target.value)}
                         />
                     </div>
                     
-                    <div className="max-h-40 overflow-y-auto bg-dark-bg/50 rounded-lg border border-slate-700/50 divide-y divide-slate-700/50">
+                    <div className="max-h-40 overflow-y-auto bg-dark-bg/50 border border-slate-700 rounded-lg divide-y divide-slate-700/50">
                         {filteredPeople.map(p => (
                             <div 
                                 key={p.id} 
@@ -133,7 +134,7 @@ export const InteractionModal: React.FC<InteractionModalProps> = ({ isOpen, onCl
                                 className={`flex items-center justify-between p-3 cursor-pointer hover:bg-slate-800/50 transition-colors ${selectedPersonIds.includes(p.id) ? 'bg-orbit-900/20' : ''}`}
                             >
                                 <div className="flex items-center gap-3">
-                                    <img src={p.avatar || `https://ui-avatars.com/api/?name=${p.name}&background=334155&color=fff`} className="w-6 h-6 rounded-full" alt="" />
+                                    <img src={p.avatar || `https://ui-avatars.com/api/?name=${p.name}&background=334155&color=fff`} className="w-8 h-8 rounded-full bg-slate-700" alt="" />
                                     <span className={`text-sm ${selectedPersonIds.includes(p.id) ? 'text-orbit-400 font-medium' : 'text-slate-300'}`}>
                                         {p.name}
                                     </span>
@@ -143,22 +144,19 @@ export const InteractionModal: React.FC<InteractionModalProps> = ({ isOpen, onCl
                         ))}
                         {filteredPeople.length === 0 && <p className="p-3 text-xs text-slate-500 text-center">No matching contacts</p>}
                     </div>
-                    <p className="text-xs text-right text-slate-500">
-                        {selectedPersonIds.length > 0 ? 
-                            `Interaction will be logged for ${selectedPersonIds.length} people.` : 
-                            'Please select at least one person.'}
-                    </p>
                 </div>
             )}
 
             {/* Interaction Details */}
             <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2">
-                    <label className="text-sm font-medium text-slate-300">Type</label>
+                    <label className="text-sm font-medium text-slate-300 flex items-center gap-2">
+                        <MessageSquare className="w-3.5 h-3.5" /> Type
+                    </label>
                     <select 
                         value={type} 
                         onChange={(e) => setType(e.target.value as InteractionType)}
-                        className="w-full bg-dark-bg border border-slate-700 rounded-lg px-3 py-2 text-sm text-white focus:ring-2 focus:ring-orbit-500 outline-none"
+                        className="w-full bg-dark-bg border border-slate-700 rounded-lg px-3 py-3 text-sm text-white focus:ring-2 focus:ring-orbit-500/50 outline-none transition-all"
                     >
                         {Object.values(InteractionType).map(t => (
                             <option key={t} value={t}>{t}</option>
@@ -166,12 +164,14 @@ export const InteractionModal: React.FC<InteractionModalProps> = ({ isOpen, onCl
                     </select>
                 </div>
                 <div className="space-y-2">
-                    <label className="text-sm font-medium text-slate-300">Date</label>
+                    <label className="text-sm font-medium text-slate-300 flex items-center gap-2">
+                        <Calendar className="w-3.5 h-3.5" /> Date
+                    </label>
                     <input 
                         type="date" 
                         value={date}
                         onChange={(e) => setDate(e.target.value)}
-                        className="w-full bg-dark-bg border border-slate-700 rounded-lg px-3 py-2 text-sm text-white focus:ring-2 focus:ring-orbit-500 outline-none"
+                        className="w-full bg-dark-bg border border-slate-700 rounded-lg px-3 py-3 text-sm text-white focus:ring-2 focus:ring-orbit-500/50 outline-none transition-all"
                     />
                 </div>
             </div>
@@ -182,7 +182,7 @@ export const InteractionModal: React.FC<InteractionModalProps> = ({ isOpen, onCl
                     value={notes}
                     onChange={(e) => setNotes(e.target.value)}
                     placeholder="What did you do? What did you talk about?"
-                    className="w-full h-24 bg-dark-bg border border-slate-700 rounded-lg px-3 py-2 text-sm text-white focus:ring-2 focus:ring-orbit-500 outline-none resize-none"
+                    className="w-full h-32 bg-dark-bg border border-slate-700 rounded-lg px-3 py-3 text-sm text-white focus:ring-2 focus:ring-orbit-500/50 outline-none resize-none transition-all"
                 />
             </div>
 
@@ -203,7 +203,7 @@ export const InteractionModal: React.FC<InteractionModalProps> = ({ isOpen, onCl
                 className="px-6 py-2 bg-orbit-600 hover:bg-orbit-500 disabled:opacity-50 disabled:cursor-not-allowed text-white rounded-lg font-medium text-sm transition-colors shadow-lg shadow-orbit-600/20 flex items-center gap-2"
             >
                 <Check className="w-4 h-4" />
-                Log for {selectedPersonIds.length} {selectedPersonIds.length === 1 ? 'Person' : 'People'}
+                Log Event
             </button>
         </div>
       </div>

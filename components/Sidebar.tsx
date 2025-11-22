@@ -1,9 +1,14 @@
 
 import React from 'react';
 import { NavLink, useLocation } from 'react-router-dom';
-import { LayoutDashboard, Users, PlusCircle, Search, Menu, CalendarCheck, Settings, Activity } from 'lucide-react';
+import { LayoutDashboard, Users, CalendarCheck, Settings, Plus } from 'lucide-react';
 
-export const Sidebar: React.FC = () => {
+interface SidebarProps {
+    onToggleActionMenu?: () => void;
+    isActionMenuOpen?: boolean;
+}
+
+export const Sidebar: React.FC<SidebarProps> = ({ onToggleActionMenu, isActionMenuOpen }) => {
   const linkClass = ({ isActive }: { isActive: boolean }) => 
     `flex items-center gap-3 px-4 py-3 rounded-xl transition-all duration-200 group ${
       isActive 
@@ -37,8 +42,21 @@ export const Sidebar: React.FC = () => {
         </div>
         <NavLink to="/settings" className={linkClass}>
           <Settings className="w-5 h-5" />
-          Settings & Data
+          Settings
         </NavLink>
+
+        {/* Desktop Action Button (Acts as trigger for the menu) */}
+        <button 
+            onClick={onToggleActionMenu}
+            className={`w-full mt-6 flex items-center justify-center gap-2 py-3 rounded-xl font-medium transition-all ${
+                isActionMenuOpen 
+                ? 'bg-slate-700 text-white' 
+                : 'bg-orbit-600 hover:bg-orbit-500 text-white shadow-lg shadow-orbit-600/20'
+            }`}
+        >
+            <Plus className={`w-5 h-5 transition-transform duration-300 ${isActionMenuOpen ? 'rotate-45' : ''}`} />
+            Quick Action
+        </button>
       </nav>
 
       <div className="px-4 py-4 border-t border-slate-800">
@@ -46,10 +64,7 @@ export const Sidebar: React.FC = () => {
             <img src="https://ui-avatars.com/api/?name=User&background=334155&color=fff" alt="User" className="w-8 h-8 rounded-full" />
             <div className="text-sm">
                 <p className="text-white font-medium">Demo User</p>
-                <div className="flex items-center gap-2 text-xs text-slate-500 mt-1">
-                    <span className="bg-slate-800 px-1.5 py-0.5 rounded border border-slate-700">⇧+A Add</span>
-                    <span className="bg-slate-800 px-1.5 py-0.5 rounded border border-slate-700">⇧+L Log</span>
-                </div>
+                <p className="text-xs text-slate-500">Synced locally</p>
             </div>
         </div>
       </div>
@@ -57,20 +72,12 @@ export const Sidebar: React.FC = () => {
   );
 };
 
-export const MobileHeader: React.FC = () => (
-    <div className="md:hidden h-16 bg-dark-bg border-b border-slate-800 flex items-center justify-center px-4 sticky top-0 z-40">
-         <div className="flex items-center gap-2">
-             <div className="w-6 h-6 bg-gradient-to-tr from-orbit-500 to-purple-500 rounded-md flex items-center justify-center text-white font-bold text-xs">O</div>
-             <span className="text-lg font-bold text-white">Orbit</span>
-        </div>
-    </div>
-);
-
 interface MobileBottomNavProps {
-  onOpenGroupLog?: () => void;
+  onToggleActionMenu?: () => void;
+  isActionMenuOpen?: boolean;
 }
 
-export const MobileBottomNav: React.FC<MobileBottomNavProps> = ({ onOpenGroupLog }) => {
+export const MobileBottomNav: React.FC<MobileBottomNavProps> = ({ onToggleActionMenu, isActionMenuOpen }) => {
   const location = useLocation();
   const isActive = (path: string) => location.pathname === path;
 
@@ -87,12 +94,17 @@ export const MobileBottomNav: React.FC<MobileBottomNavProps> = ({ onOpenGroupLog
            <span className="text-[10px] mt-1">People</span>
         </NavLink>
 
+        {/* The Omni Trigger */}
         <button 
-          onClick={onOpenGroupLog}
-          className="flex flex-col items-center justify-center w-full h-full text-orbit-500 -mt-4"
+          onClick={onToggleActionMenu}
+          className="flex flex-col items-center justify-center w-full h-full -mt-6 relative z-50"
         >
-          <div className="bg-orbit-600 text-white p-3 rounded-full shadow-lg shadow-orbit-500/20">
-            <PlusCircle className="w-6 h-6" />
+          <div className={`p-3 rounded-full shadow-lg transition-all duration-300 ${
+              isActionMenuOpen 
+              ? 'bg-slate-700 text-white rotate-45' 
+              : 'bg-orbit-600 text-white shadow-orbit-500/30 hover:scale-105'
+          }`}>
+            <Plus className="w-6 h-6" />
           </div>
         </button>
 
@@ -103,7 +115,7 @@ export const MobileBottomNav: React.FC<MobileBottomNavProps> = ({ onOpenGroupLog
 
         <NavLink to="/settings" className={`flex flex-col items-center justify-center w-full h-full ${isActive('/settings') ? 'text-orbit-500' : 'text-slate-600'}`}>
            <Settings className="w-6 h-6" />
-           <span className="text-[10px] mt-1">Data</span>
+           <span className="text-[10px] mt-1">Settings</span>
         </NavLink>
       </div>
     </div>

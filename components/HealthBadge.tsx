@@ -1,3 +1,4 @@
+
 import React from 'react';
 import { HealthStatus } from '../types';
 
@@ -7,25 +8,30 @@ interface HealthBadgeProps {
 }
 
 export const HealthBadge: React.FC<HealthBadgeProps> = ({ score, className = '' }) => {
-  let color = 'bg-green-500';
+  let color = 'bg-emerald-500';
   let status = HealthStatus.HEALTHY;
+  let effects = '';
 
   if (score < 50) {
-    color = 'bg-red-500 shadow-[0_0_10px_rgba(239,68,68,0.4)]';
+    // Overdue - High Urgency (Red)
+    color = 'bg-red-500';
+    effects = 'shadow-[0_0_8px_rgba(239,68,68,0.8)] animate-pulse-slow';
     status = HealthStatus.OVERDUE;
   } else if (score < 80) {
-    color = 'bg-yellow-500';
+    // Needs Attention - Warning (Amber/Yellow)
+    color = 'bg-amber-500';
+    effects = 'shadow-[0_0_6px_rgba(245,158,11,0.6)]';
     status = HealthStatus.NEEDS_ATTENTION;
   }
 
   return (
     <div className={`relative inline-flex items-center justify-center ${className}`} title={`Health Score: ${Math.round(score)}`}>
       {/* Ring Background */}
-      <div className="absolute inset-0 rounded-full border-2 border-slate-700"></div>
+      <div className="absolute inset-0 rounded-full border-2 border-slate-800 bg-slate-900"></div>
       
       {/* Health Indicator */}
       <div 
-        className={`h-3 w-3 rounded-full ${color} transition-all duration-500`}
+        className={`relative h-3 w-3 rounded-full ${color} ${effects} transition-all duration-500 border border-slate-900/20`}
       ></div>
     </div>
   );

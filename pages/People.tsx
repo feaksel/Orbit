@@ -279,7 +279,7 @@ export const People: React.FC = () => {
                                     <td className="p-4 text-right">
                                         <button 
                                             onClick={(e) => handleQuickLog(p.id, e)}
-                                            className="p-2 text-slate-500 hover:text-green-500 hover:bg-green-500/10 rounded-lg transition-colors"
+                                            className="p-2 text-slate-500 hover:text-orbit-500 hover:bg-orbit-500/10 rounded-lg transition-colors"
                                             title="Quick Log"
                                         >
                                             <CheckCircle2 className="w-5 h-5" />

@@ -139,9 +139,9 @@ export const Reminders: React.FC = () => {
                             key={t.id} 
                             className={`text-[10px] px-1.5 py-1 rounded truncate cursor-pointer flex items-center gap-1 group relative overflow-hidden ${
                                 t.category === 'work' ? 'bg-blue-500/20 text-blue-300' :
-                                t.category === 'finance' ? 'bg-green-500/20 text-green-300' :
+                                t.category === 'finance' ? 'bg-emerald-500/20 text-emerald-300' :
                                 t.category === 'health' ? 'bg-red-500/20 text-red-300' :
-                                'bg-purple-500/20 text-purple-300'
+                                'bg-orbit-500/20 text-orbit-300' 
                             }`}
                             onClick={(e) => toggleComplete(t.id, e)}
                             title={t.title}
@@ -181,9 +181,6 @@ export const Reminders: React.FC = () => {
   const archivedTasks = tasks.filter(t => t.isCompleted).sort((a, b) => (b.date || '').localeCompare(a.date || ''));
   
   const getArchivedGroups = () => {
-      // We can't easily know exact completion time without a timestamp field, 
-      // but we can group loosely if we had it. Since we don't, we'll just list them.
-      // Alternatively, we can group by "Scheduled Date" as a proxy for history context.
       const todayCompleted = archivedTasks.filter(t => t.date === today);
       const olderCompleted = archivedTasks.filter(t => t.date !== today);
       return { todayCompleted, olderCompleted };
@@ -348,7 +345,7 @@ export const Reminders: React.FC = () => {
 
                 <div className="flex justify-end gap-3 pt-2">
                     <button onClick={() => setIsAdding(false)} className="text-slate-400 hover:text-white px-4 py-2">Cancel</button>
-                    <button onClick={handleSaveTask} className="bg-green-600 hover:bg-green-500 text-white px-6 py-2 rounded-lg">Save</button>
+                    <button onClick={handleSaveTask} className="bg-orbit-600 hover:bg-orbit-500 text-white px-6 py-2 rounded-lg">Save</button>
                 </div>
             </div>
         )}
@@ -377,7 +374,7 @@ export const Reminders: React.FC = () => {
                         {generalTodos.map(task => (
                              <div key={task.id} className="bg-dark-card p-4 rounded-xl border border-slate-700/50 flex items-center justify-between group hover:border-orbit-500/50 transition-all">
                                 <div className="flex items-center gap-4">
-                                    <button onClick={() => toggleComplete(task.id)} className="text-slate-500 hover:text-green-500 transition-colors">
+                                    <button onClick={() => toggleComplete(task.id)} className="text-slate-500 hover:text-orbit-500 transition-colors">
                                         <CircleIcon className="w-6 h-6" />
                                     </button>
                                     <div>
@@ -413,7 +410,7 @@ export const Reminders: React.FC = () => {
                         <div key={group}>
                             <h3 className={`text-sm font-bold uppercase tracking-wider mb-4 flex items-center gap-2 ${
                                 group === 'overdue' ? 'text-red-400' : 
-                                group === 'today' ? 'text-green-400' : 'text-slate-400'
+                                group === 'today' ? 'text-orbit-400' : 'text-slate-400'
                             }`}>
                                 <Calendar className="w-4 h-4" /> {group}
                             </h3>
@@ -421,13 +418,13 @@ export const Reminders: React.FC = () => {
                                 {groupTasks.map(task => (
                                     <div key={task.id} className="bg-dark-card p-4 rounded-xl border border-slate-700/50 flex items-center justify-between group hover:border-orbit-500/50 transition-all">
                                         <div className="flex items-center gap-4">
-                                            <button onClick={() => toggleComplete(task.id)} className="text-slate-500 hover:text-green-500 transition-colors">
+                                            <button onClick={() => toggleComplete(task.id)} className="text-slate-500 hover:text-orbit-500 transition-colors">
                                                 <CircleIcon className="w-6 h-6" />
                                             </button>
                                             <div>
                                                 <h4 className="text-white font-medium flex items-center gap-2">
                                                     {task.title}
-                                                    {task.recurrence && task.recurrence !== 'none' && <Repeat className="w-3 h-3 text-purple-400" />}
+                                                    {task.recurrence && task.recurrence !== 'none' && <Repeat className="w-3 h-3 text-orbit-400" />}
                                                 </h4>
                                                 <div className="flex items-center gap-3 text-xs text-slate-400 mt-1">
                                                     <span className="flex items-center gap-1"><Calendar className="w-3 h-3" /> {task.date}</span>
@@ -468,8 +465,8 @@ export const Reminders: React.FC = () => {
         {/* Recurring View - DEDICATED TAB */}
         {view === 'recurring' && (
             <div className="space-y-6 animate-fade-in">
-                <div className="bg-purple-500/10 border border-purple-500/20 p-4 rounded-xl flex items-start gap-3">
-                    <div className="p-2 bg-purple-500/20 rounded-lg text-purple-400 mt-1">
+                <div className="bg-orbit-500/10 border border-orbit-500/20 p-4 rounded-xl flex items-start gap-3">
+                    <div className="p-2 bg-orbit-500/20 rounded-lg text-orbit-400 mt-1">
                         <Repeat className="w-5 h-5" />
                     </div>
                     <div>
@@ -496,7 +493,7 @@ export const Reminders: React.FC = () => {
                                             {task.title}
                                         </h4>
                                         <div className="flex items-center gap-3 text-xs text-slate-400 mt-1">
-                                            <span className="flex items-center gap-1 bg-purple-500/10 text-purple-300 px-2 py-0.5 rounded capitalize">
+                                            <span className="flex items-center gap-1 bg-orbit-500/10 text-orbit-300 px-2 py-0.5 rounded capitalize">
                                                 <Repeat className="w-3 h-3" /> {task.recurrence}
                                             </span>
                                             <span className="flex items-center gap-1 capitalize"><Tag className="w-3 h-3" /> {task.category}</span>
@@ -506,7 +503,7 @@ export const Reminders: React.FC = () => {
                                 <div className="flex items-center gap-2">
                                     <button 
                                         onClick={() => toggleComplete(task.id)} 
-                                        className="bg-green-600/20 text-green-500 hover:bg-green-600 hover:text-white px-3 py-1.5 rounded-lg text-xs font-medium transition-colors"
+                                        className="bg-orbit-600/20 text-orbit-500 hover:bg-orbit-600 hover:text-white px-3 py-1.5 rounded-lg text-xs font-medium transition-colors"
                                     >
                                         Complete
                                     </button>
@@ -531,14 +528,14 @@ export const Reminders: React.FC = () => {
                 {/* Today's Completed Stack */}
                 {todayCompleted.length > 0 && (
                     <div>
-                        <h3 className="text-sm font-bold uppercase tracking-wider mb-4 text-green-400 flex items-center gap-2">
+                        <h3 className="text-sm font-bold uppercase tracking-wider mb-4 text-orbit-400 flex items-center gap-2">
                             <CheckCircle2 className="w-4 h-4" /> Completed Today
                         </h3>
                         <div className="grid gap-3 opacity-75">
                             {todayCompleted.map(task => (
                                 <div key={task.id} className="bg-dark-card/50 p-4 rounded-xl border border-slate-800 flex items-center justify-between group">
                                     <div className="flex items-center gap-4">
-                                        <CheckCircle2 className="w-6 h-6 text-green-500" />
+                                        <CheckCircle2 className="w-6 h-6 text-orbit-500" />
                                         <div>
                                             <h4 className="text-slate-300 font-medium line-through decoration-slate-600">
                                                 {task.title}

@@ -1,9 +1,21 @@
-import React, { useState } from 'react';
-import { Download, Upload, Trash2, AlertTriangle, Check, FileJson, HardDrive, Shield } from 'lucide-react';
+
+import React, { useState, useEffect } from 'react';
+import { Download, Upload, Trash2, AlertTriangle, Check, FileJson, HardDrive, Shield, Palette } from 'lucide-react';
 import { exportData, importData, clearAllData } from '../services/storageService';
+import { THEMES, ThemeId, applyTheme, getStoredTheme } from '../services/themeService';
 
 export const Settings: React.FC = () => {
   const [importStatus, setImportStatus] = useState<{type: 'success' | 'error', msg: string} | null>(null);
+  const [currentTheme, setCurrentTheme] = useState<ThemeId>('emerald');
+
+  useEffect(() => {
+      setCurrentTheme(getStoredTheme());
+  }, []);
+
+  const handleThemeChange = (id: ThemeId) => {
+      applyTheme(id);
+      setCurrentTheme(id);
+  };
 
   const handleExport = () => {
     const jsonString = exportData();
@@ -46,49 +58,83 @@ export const Settings: React.FC = () => {
   };
 
   return (
-    <div className="p-6 max-w-3xl mx-auto space-y-8 animate-fade-in">
+    <div className="p-6 max-w-3xl mx-auto space-y-8 animate-fade-in pb-24 md:pb-8">
       <div className="mb-8">
-        <h1 className="text-3xl font-bold text-white">Settings & Data</h1>
-        <p className="text-slate-400">Manage your data privacy and portability.</p>
+        <h1 className="text-3xl font-bold text-white">Settings</h1>
+        <p className="text-slate-400">Customize your experience and manage data.</p>
       </div>
 
-      {/* Privacy Badge */}
-      <div className="bg-blue-500/10 border border-blue-500/20 p-4 rounded-xl flex items-start gap-4">
-        <div className="p-2 bg-blue-500/20 rounded-lg text-blue-400">
-            <Shield className="w-6 h-6" />
-        </div>
-        <div>
-            <h3 className="text-white font-bold">Local-First Privacy</h3>
-            <p className="text-sm text-slate-300 mt-1 leading-relaxed">
-                Orbit stores all your personal relationship data <strong>only on this device</strong>. 
-                We do not have a central server that sees your contacts. To use Orbit on another device, 
-                please use the Export/Import buttons below to move your data manually.
-            </p>
-        </div>
+      {/* Theme Section */}
+      <div className="bg-dark-card rounded-2xl border border-slate-700 overflow-hidden">
+          <div className="p-6 border-b border-slate-700">
+              <h2 className="text-xl font-bold text-white flex items-center gap-2">
+                  <Palette className="text-orbit-500" /> Appearance
+              </h2>
+          </div>
+          <div className="p-6">
+              <p className="text-sm text-slate-400 mb-4">Select an accent theme for your workspace.</p>
+              <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
+                  {(Object.keys(THEMES) as ThemeId[]).map((id) => (
+                      <button
+                        key={id}
+                        onClick={() => handleThemeChange(id)}
+                        className={`p-3 rounded-xl border transition-all flex items-center gap-3 ${
+                            currentTheme === id 
+                            ? 'bg-slate-800 border-orbit-500 ring-1 ring-orbit-500/50' 
+                            : 'bg-slate-800/50 border-slate-700 hover:border-slate-500 hover:bg-slate-800'
+                        }`}
+                      >
+                          <div 
+                            className="w-8 h-8 rounded-full shadow-lg" 
+                            style={{ background: THEMES[id].colors[500] }}
+                          ></div>
+                          <div className="text-left">
+                              <div className={`text-sm font-medium ${currentTheme === id ? 'text-white' : 'text-slate-300'}`}>
+                                  {THEMES[id].name}
+                              </div>
+                              {currentTheme === id && <div className="text-[10px] text-orbit-400">Active</div>}
+                          </div>
+                      </button>
+                  ))}
+              </div>
+          </div>
       </div>
 
       {/* Export Section */}
       <div className="bg-dark-card rounded-2xl border border-slate-700 overflow-hidden">
           <div className="p-6 border-b border-slate-700">
               <h2 className="text-xl font-bold text-white flex items-center gap-2">
-                  <HardDrive className="text-orbit-500" /> Backup & Restore
+                  <HardDrive className="text-orbit-500" /> Data Management
               </h2>
           </div>
           
           <div className="p-6 space-y-6">
+              {/* Privacy Badge */}
+              <div className="bg-blue-500/10 border border-blue-500/20 p-4 rounded-xl flex items-start gap-4">
+                <div className="p-2 bg-blue-500/20 rounded-lg text-blue-400 shrink-0">
+                    <Shield className="w-6 h-6" />
+                </div>
+                <div>
+                    <h3 className="text-white font-bold text-sm">Local-First Privacy</h3>
+                    <p className="text-xs text-slate-300 mt-1 leading-relaxed">
+                        Orbit stores data <strong>only on this device</strong>. 
+                        We do not see your contacts. Use Export/Import to move data between devices.
+                    </p>
+                </div>
+              </div>
+
               <div className="flex flex-col md:flex-row gap-6 items-start justify-between">
                   <div className="flex-1">
-                      <h3 className="text-white font-medium mb-1">Export Data</h3>
+                      <h3 className="text-white font-medium mb-1">Export Backup</h3>
                       <p className="text-sm text-slate-400">
-                          Download a JSON file containing all your people, circles, and tasks. 
-                          Keep this file safe or upload it to your Google Drive.
+                          Download a JSON file containing all your people, circles, and tasks.
                       </p>
                   </div>
                   <button 
                     onClick={handleExport}
-                    className="bg-orbit-600 hover:bg-orbit-500 text-white px-4 py-2 rounded-lg flex items-center gap-2 font-medium transition-all shadow-lg shadow-orbit-600/20"
+                    className="bg-slate-800 hover:bg-slate-700 border border-slate-600 text-white px-4 py-2 rounded-lg flex items-center gap-2 font-medium transition-all"
                   >
-                      <Download className="w-4 h-4" /> Download Backup
+                      <Download className="w-4 h-4" /> Download
                   </button>
               </div>
 
@@ -96,10 +142,10 @@ export const Settings: React.FC = () => {
 
               <div className="flex flex-col md:flex-row gap-6 items-start justify-between">
                   <div className="flex-1">
-                      <h3 className="text-white font-medium mb-1">Import Data</h3>
+                      <h3 className="text-white font-medium mb-1">Import Backup</h3>
                       <p className="text-sm text-slate-400">
-                          Restore your data from a previously exported JSON file. 
-                          <span className="text-yellow-500 block mt-1 text-xs">⚠️ This will overwrite your current data.</span>
+                          Restore from a previously exported JSON file. 
+                          <span className="text-yellow-500 block mt-1 text-xs">⚠️ Overwrites current data.</span>
                       </p>
                       {importStatus && (
                           <div className={`mt-3 text-sm flex items-center gap-2 ${importStatus.type === 'success' ? 'text-green-400' : 'text-red-400'}`}>
@@ -109,7 +155,7 @@ export const Settings: React.FC = () => {
                       )}
                   </div>
                   <label className="cursor-pointer bg-slate-800 hover:bg-slate-700 text-white px-4 py-2 rounded-lg flex items-center gap-2 font-medium transition-all border border-slate-600 hover:border-slate-500">
-                      <Upload className="w-4 h-4" /> Restore from File
+                      <Upload className="w-4 h-4" /> Restore File
                       <input type="file" accept=".json" onChange={handleImport} className="hidden" />
                   </label>
               </div>
@@ -124,7 +170,7 @@ export const Settings: React.FC = () => {
               </h2>
               <div className="flex flex-col md:flex-row gap-6 items-center justify-between">
                   <p className="text-sm text-slate-400">
-                      Permanently delete all your local data and reset the application to its default state.
+                      Permanently delete all your local data and reset the application.
                   </p>
                   <button 
                     onClick={handleClearData}
